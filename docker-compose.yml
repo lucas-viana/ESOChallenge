@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # --- 1. Serviço do Banco de Dados (PostgreSQL) ---
+  db:
+    image: postgres:15
+    container_name: eso-postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 353742Ap$
+      POSTGRES_DB: eso_challenge_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # --- 2. Serviço do Backend (.NET API) ---
+  backend-api:
+    container_name: eso-backend-api
+    build:
+      context: ./WebAPI-ESOChallenge
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8081:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Database=eso_challenge_db;Username=postgres;Password=353742Ap$
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - db
+
+  # --- 3. Serviço do Frontend (Vue.js) ---
+  frontend-web:
+    container_name: eso-frontend-web
+    build:
+      context: ./WebAPP-ESOChallenge
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend-api
+
+volumes:
+  pgdata:
