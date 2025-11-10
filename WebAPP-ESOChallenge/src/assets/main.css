@@ -1,0 +1,29 @@
+@import './base.css';
+
+/* Reset para permitir que cada view controle seu próprio layout */
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilos para links da navegação */
+a {
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+/* Remove estilos conflitantes do template padrão */
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Garante que o root ocupe toda a tela */
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+}
