@@ -21,15 +21,20 @@ namespace WebAPI_ESOChallenge.Features.Authentication.Services
 
         public string GenerateToken(ApplicationUser user)
         {
-            var secretKey = _configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT Secret Key not configured");
+            // Ler configurações do appsettings.json
+            var secretKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Secret Key not configured");
             var issuer = _configuration["Jwt:Issuer"] ?? "WebAPI-ESOChallenge";
             var audience = _configuration["Jwt:Audience"] ?? "WebAPI-ESOChallenge";
+            
+            // Ler tempo de expiração (padrão 60 minutos)
+            var expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryInMinutes"], out var minutes) ? minutes : 60;
 
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new Claim(ClaimTypes.Email, user.Email ?? string.Empty)
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // ID único do token
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
@@ -39,7 +44,7 @@ namespace WebAPI_ESOChallenge.Features.Authentication.Services
                 issuer: issuer,
                 audience: audience,
                 claims: claims,
-                expires: DateTime.Now.AddHours(1),
+                expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler().WriteToken(token);

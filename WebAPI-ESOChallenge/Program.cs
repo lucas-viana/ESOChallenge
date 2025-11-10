@@ -3,6 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using WebAPI_ESOChallenge.Features.Authentication.Interfaces;
 using WebAPI_ESOChallenge.Features.Authentication.Services;
 using WebAPI_ESOChallenge.Features.Authentication.Models;
@@ -27,7 +30,7 @@ builder.Services.AddSwaggerGen();
 
 // Configure database context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection") ?? 
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? 
         throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
 
 // Configure Identity
@@ -50,6 +53,36 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+// ========================================
+// JWT Authentication Configuration
+// ========================================
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "WebAPI-ESOChallenge";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "WebAPI-ESOChallenge";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false; // Mudar para true em produção
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        ClockSkew = TimeSpan.Zero // Remove delay de expiração do token
+    };
+});
 
 // Register application services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -79,9 +112,6 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = string.Empty; // Swagger at root URL
     });
 }
-
-// Security middleware
-app.UseHttpsRedirection();
 
 // Authentication & Authorization
 // Order is important: Authentication BEFORE Authorization
