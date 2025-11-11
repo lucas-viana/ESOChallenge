@@ -20,6 +20,7 @@ function handleLogout() {
         <div class="nav-links">
           <RouterLink to="/">Home</RouterLink>
           <RouterLink to="/cosmetics">Cosméticos</RouterLink>
+          <RouterLink to="/shop">🛒 Loja</RouterLink>
           <RouterLink to="/about">Sobre</RouterLink>
           
           <!-- Auth links -->
