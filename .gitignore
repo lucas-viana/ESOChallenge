@@ -73,6 +73,17 @@ _ReSharper*/
 # Properties
 Properties/launchSettings.json
 
+# AppSettings
+appsettings.*.json
+!appsettings.json
+
+# Raw data files
+*-raw.json
+
+# Documentation
+*.md
+!README.md
+
 # Node.js / Vue.js
 # Logs
 logs
