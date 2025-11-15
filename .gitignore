@@ -52,6 +52,20 @@ _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
 
+# NuGet
+*.nuget.props
+*.nuget.g.props
+*.nuget.targets
+*.nuget.g.targets
+*.nuget.dgspec.json
+project.assets.json
+project.fragment.lock.json
+
+# Rider
+*.rider.*
+riderModule.iml
+/_ReSharper.Caches/
+
 # Other
 *.vsix
 *.psess
