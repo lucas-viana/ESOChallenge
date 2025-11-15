@@ -88,26 +88,46 @@ public class CosmeticService : ICosmeticService
     {
         try
         {
-            _logger.LogInformation("Buscando cosméticos em promoção da API do Fortnite");
+            _logger.LogInformation("Buscando cosméticos da loja do Fortnite");
             
-            var url = $"{_baseUrl}/shop/br";
-            var response = await _httpClientService.GetAsync<FortniteApiResponse<ShopResponse>>(url);
+            var url = $"{_baseUrl}/shop";
+            var response = await _httpClientService.GetAsync<FortniteApiResponse<ShopData>>(url);
 
-            if (response?.Data?.Entries == null || !response.Data.Entries.Any())
+            if (response?.Data?.Entries == null)
             {
-                _logger.LogWarning("Nenhum cosmético em promoção encontrado na API");
+                _logger.LogWarning("Nenhum dado da loja encontrado na API");
                 return Enumerable.Empty<Cosmetic>();
             }
 
-            return response.Data.Entries
-                .Where(entry => entry.Items != null)
-                .SelectMany(entry => entry.Items!)
-                .Where(dto => dto.Type != null && dto.Rarity != null)
-                .Select(MapToCosmetic);
+            _logger.LogInformation("Total de entries na loja: {Count}", response.Data.Entries.Count);
+
+            // Dictionary para evitar duplicatas (mesmo cosmético pode aparecer em múltiplas entries)
+            var uniqueCosmetics = new Dictionary<string, Cosmetic>();
+
+            foreach (var entry in response.Data.Entries.Where(e => e.BrItems != null && e.BrItems.Any()))
+            {
+                foreach (var dto in entry.BrItems!.Where(dto => dto.Type != null && dto.Rarity != null))
+                {
+                    // Adiciona apenas se ainda não existir (evita duplicatas)
+                    if (!uniqueCosmetics.ContainsKey(dto.Id))
+                    {
+                        var cosmetic = MapToCosmetic(dto);
+                        // Marca como disponível na loja
+                        cosmetic.IsAvailable = true;
+                        // Atualiza o preço com o valor real da loja, se disponível
+                        cosmetic.Price = entry.FinalPrice > 0 ? entry.FinalPrice : cosmetic.Price;
+                        
+                        uniqueCosmetics.Add(dto.Id, cosmetic);
+                    }
+                }
+            }
+
+            _logger.LogInformation("{Count} cosméticos únicos encontrados na loja", uniqueCosmetics.Count);
+            return uniqueCosmetics.Values;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao buscar cosméticos em promoção");
+            _logger.LogError(ex, "Erro ao buscar cosméticos da loja");
             throw;
         }
     }

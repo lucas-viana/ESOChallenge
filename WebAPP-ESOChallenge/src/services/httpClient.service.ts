@@ -1,10 +1,11 @@
 /**
  * Serviço HTTP genérico e reutilizável
  * Seguindo o princípio da Inversão de Dependência (SOLID)
- * Responsável por toda comunicação HTTP
+ * Responsável por toda comunicação HTTP com interceptor de autenticação
  */
 
 import { API_CONFIG } from '@/config/api.config'
+import { addAuthToken } from '@/services/interceptors/auth.interceptor'
 import type { ErrorResponse } from '@/types/cosmetic.types'
 
 export class HttpClientService {
@@ -38,17 +39,19 @@ export class HttpClientService {
   }
 
   /**
-   * GET Request genérico
+   * GET Request genérico com autenticação automática
    */
   async get<T>(endpoint: string, signal?: AbortSignal): Promise<T> {
     try {
-      const response = await fetch(this.buildURL(endpoint), {
+      const config = addAuthToken({
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
         signal,
       })
+
+      const response = await fetch(this.buildURL(endpoint), config)
 
       return this.handleResponse<T>(response)
     } catch (error) {
@@ -60,17 +63,19 @@ export class HttpClientService {
   }
 
   /**
-   * POST Request genérico
+   * POST Request genérico com autenticação automática
    */
   async post<T, B = unknown>(endpoint: string, body: B): Promise<T> {
     try {
-      const response = await fetch(this.buildURL(endpoint), {
+      const config = addAuthToken({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
       })
+
+      const response = await fetch(this.buildURL(endpoint), config)
 
       return this.handleResponse<T>(response)
     } catch (error) {

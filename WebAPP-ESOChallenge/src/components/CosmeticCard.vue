@@ -249,7 +249,8 @@ function handleImageError() {
 .cosmetic-card__availability {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   font-size: 0.75rem;
   color: #4ade80;
   font-weight: 600;
@@ -260,11 +261,12 @@ function handleImageError() {
 }
 
 .availability-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   background: #4ade80;
   border-radius: 50%;
   animation: pulse 2s infinite;
+  flex-shrink: 0;
 }
 
 @keyframes pulse {
