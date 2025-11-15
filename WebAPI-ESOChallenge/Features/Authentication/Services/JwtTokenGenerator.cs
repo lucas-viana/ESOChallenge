@@ -1,10 +1,7 @@
-using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Configuration;
 using WebAPI_ESOChallenge.Features.Authentication.Interfaces;
 using WebAPI_ESOChallenge.Features.Authentication.Models;
 
