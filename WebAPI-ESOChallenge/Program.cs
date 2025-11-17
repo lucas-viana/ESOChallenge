@@ -11,6 +11,8 @@ using WebAPI_ESOChallenge.Features.Authentication.Services;
 using WebAPI_ESOChallenge.Features.Authentication.Models;
 using WebAPI_ESOChallenge.Features.Cosmetics.Interfaces;
 using WebAPI_ESOChallenge.Features.Cosmetics.Services;
+using WebAPI_ESOChallenge.Features.Purchases.Interfaces;
+using WebAPI_ESOChallenge.Features.Purchases.Services;
 using WebAPI_ESOChallenge.Services.Interfaces;
 using WebAPI_ESOChallenge.Services;
 using WebAPI_ESOChallenge.Data;
@@ -89,7 +91,11 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<ICosmeticService, CosmeticService>();
 builder.Services.AddScoped<IHttpClientService, HttpClientService>();
+builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddHttpClient();
+
+// Register background services
+builder.Services.AddHostedService<FortniteDataSyncService>();
 
 var app = builder.Build();
 
@@ -122,4 +128,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Run the application
-app.Run();
+await app.RunAsync();
