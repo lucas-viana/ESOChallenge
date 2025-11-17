@@ -4,9 +4,7 @@
     <header class="shop-header">
       <div class="shop-header-content">
         <h1 class="shop-title">🛒 Loja do Fortnite</h1>
-        <p class="shop-subtitle">
-          Descubra os itens cosméticos disponíveis
-        </p>
+        <p class="shop-subtitle">Descubra os itens cosméticos disponíveis</p>
       </div>
     </header>
 
@@ -28,7 +26,11 @@
     <!-- Tab Content: Em Promoção -->
     <div v-if="activeTab === 'shop'" class="tab-content">
       <LoadingSpinner v-if="cosmeticStore.loading" message="Carregando itens da loja..." />
-      <ErrorMessage v-else-if="cosmeticStore.error" :message="cosmeticStore.error" @retry="loadShopItems" />
+      <ErrorMessage
+        v-else-if="cosmeticStore.error"
+        :message="cosmeticStore.error"
+        @retry="loadShopItems"
+      />
       <div v-else-if="!cosmeticStore.hasCosmetics" class="empty-state">
         <div class="empty-icon">🛍️</div>
         <h3 class="empty-title">Loja Vazia</h3>
@@ -39,7 +41,7 @@
         <div class="shop-stats-card">
           <div class="stat-item">
             <span class="stat-label">Itens em Promoção</span>
-            <span class="stat-value">{{ cosmeticStore.cosmeticsCount }}</span>
+            <span class="stat-value">{{ filteredShopCosmetics.length }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">Última Atualização</span>
@@ -47,7 +49,13 @@
           </div>
         </div>
         <div class="shop-grid">
-          <CosmeticCard v-for="cosmetic in cosmeticStore.cosmetics" :key="cosmetic.id" :cosmetic="cosmetic" />
+          <CosmeticCard
+            v-for="cosmetic in filteredShopCosmetics"
+            :key="cosmetic.id"
+            :cosmetic="cosmetic"
+            :show-purchase-button="authStore.isAuthenticated"
+            @purchased="handlePurchase"
+          />
         </div>
       </div>
     </div>
@@ -93,15 +101,21 @@
         <div class="shop-stats-card">
           <div class="stat-item">
             <span class="stat-label">Total de Itens</span>
-            <span class="stat-value">{{ allCosmetics.length }}</span>
+            <span class="stat-value">{{ filteredAllCosmetics.length }}</span>
           </div>
           <div class="stat-item">
             <span class="stat-label">Mostrando</span>
-            <span class="stat-value">{{ displayedItems.length }} de {{ allCosmetics.length }}</span>
+            <span class="stat-value"
+              >{{ displayedItems.length }} de {{ filteredAllCosmetics.length }}</span
+            >
           </div>
         </div>
         <div class="shop-grid">
-          <CosmeticCard v-for="cosmetic in displayedItems" :key="cosmetic.id" :cosmetic="cosmetic" />
+          <CosmeticCard
+            v-for="cosmetic in displayedItems"
+            :key="cosmetic.id"
+            :cosmetic="cosmetic"
+          />
         </div>
         <div v-if="hasMoreItems" class="load-more-container">
           <button @click="loadMore" class="load-more-btn">
@@ -116,18 +130,22 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCosmeticStore } from '@/stores/cosmetic.store'
+import { usePurchaseStore } from '@/stores/purchase.store'
+import { useAuthStore } from '@/stores/auth.store'
 import CosmeticCard from '@/components/CosmeticCard.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ErrorMessage.vue'
 import type { Cosmetic } from '@/types/cosmetic.types'
 
 const cosmeticStore = useCosmeticStore()
+const purchaseStore = usePurchaseStore()
+const authStore = useAuthStore()
 
 // Tabs
 const tabs = [
   { id: 'shop', label: 'Em Promoção', emoji: '🔥' },
   { id: 'new', label: 'Novos Lançamentos', emoji: '✨' },
-  { id: 'all', label: 'Todos os Itens', emoji: '📦' }
+  { id: 'all', label: 'Todos os Itens', emoji: '📦' },
 ]
 const activeTab = ref('shop')
 
@@ -153,16 +171,29 @@ const currentDate = computed(() => {
   })
 })
 
+// Filter out bundle child items (price = 0) from shop
+const filteredShopCosmetics = computed(() => {
+  return cosmeticStore.cosmetics.filter((c) => c.price > 0)
+})
+
+const filteredNewCosmetics = computed(() => {
+  return newCosmetics.value.filter((c) => c.price > 0)
+})
+
+const filteredAllCosmetics = computed(() => {
+  return allCosmetics.value.filter((c) => c.price > 0)
+})
+
 const displayedItems = computed(() => {
-  return allCosmetics.value.slice(0, currentPage.value * itemsPerPage)
+  return filteredAllCosmetics.value.slice(0, currentPage.value * itemsPerPage)
 })
 
 const hasMoreItems = computed(() => {
-  return displayedItems.value.length < allCosmetics.value.length
+  return displayedItems.value.length < filteredAllCosmetics.value.length
 })
 
 const remainingItems = computed(() => {
-  return allCosmetics.value.length - displayedItems.value.length
+  return filteredAllCosmetics.value.length - displayedItems.value.length
 })
 
 // Methods
@@ -201,7 +232,7 @@ async function loadAllItems() {
 
 function changeTab(tabId: string) {
   activeTab.value = tabId
-  
+
   // Load data for the active tab if not loaded yet
   if (tabId === 'new' && newCosmetics.value.length === 0 && !newLoading.value) {
     loadNewItems()
@@ -214,9 +245,23 @@ function loadMore() {
   currentPage.value++
 }
 
+function handlePurchase(cosmeticId: string) {
+  console.log('Cosmetic purchased:', cosmeticId)
+  // Refresh user data
+  if (authStore.isAuthenticated) {
+    purchaseStore.fetchVBucks()
+    purchaseStore.fetchOwnedCosmetics()
+  }
+}
+
 // Lifecycle
 onMounted(async () => {
   await loadShopItems()
+
+  // Load user purchase data if authenticated
+  if (authStore.isAuthenticated) {
+    await Promise.all([purchaseStore.fetchVBucks(), purchaseStore.fetchOwnedCosmetics()])
+  }
 })
 
 onUnmounted(() => {
@@ -254,8 +299,13 @@ onUnmounted(() => {
 }
 
 @keyframes shine {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.2); }
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.2);
+  }
 }
 
 .shop-subtitle {
@@ -319,8 +369,12 @@ onUnmounted(() => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .shop-stats-card {
@@ -396,8 +450,13 @@ onUnmounted(() => {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .empty-title {

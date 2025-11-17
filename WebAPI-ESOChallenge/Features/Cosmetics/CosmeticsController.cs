@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebAPI_ESOChallenge.Features.Cosmetics.Interfaces;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace WebAPI_ESOChallenge.Features.Cosmetics
 {
+    /// <summary>
+    /// Controller responsável apenas por receber requisições HTTP
+    /// e delegar para o serviço (Single Responsibility Principle)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class CosmeticsController : ControllerBase
@@ -31,7 +32,8 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics
             {
                 _logger.LogInformation("Requisição recebida para obter todos os cosméticos");
                 var cosmetics = await _cosmeticService.GetAllCosmeticsAsync();
-                return Ok(new { success = true, data = cosmetics, count = cosmetics.Count() });
+                var cosmeticsList = cosmetics.ToList();
+                return Ok(new { success = true, data = cosmeticsList, count = cosmeticsList.Count });
             }
             catch (Exception ex)
             {
@@ -50,7 +52,8 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics
             {
                 _logger.LogInformation("Requisição recebida para obter cosméticos novos");
                 var cosmetics = await _cosmeticService.GetNewCosmeticsAsync();
-                return Ok(new { success = true, data = cosmetics, count = cosmetics.Count() });
+                var cosmeticsList = cosmetics.ToList();
+                return Ok(new { success = true, data = cosmeticsList, count = cosmeticsList.Count });
             }
             catch (Exception ex)
             {
@@ -69,7 +72,8 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics
             {
                 _logger.LogInformation("Requisição recebida para obter cosméticos em promoção");
                 var cosmetics = await _cosmeticService.GetShopCosmeticsAsync();
-                return Ok(new { success = true, data = cosmetics, count = cosmetics.Count() });
+                var cosmeticsList = cosmetics.ToList();
+                return Ok(new { success = true, data = cosmeticsList, count = cosmeticsList.Count });
             }
             catch (Exception ex)
             {

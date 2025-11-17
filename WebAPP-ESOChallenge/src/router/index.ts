@@ -60,6 +60,24 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/my-items',
+    name: 'my-items',
+    component: () => import('../views/MyItemsView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Meus Itens'
+    }
+  },
+  {
+    path: '/purchase-history',
+    name: 'purchase-history',
+    component: () => import('../views/PurchaseHistoryView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Histórico de Compras'
+    }
+  },
+  {
     path: '/about',
     name: 'about',
     component: () => import('../views/AboutView.vue'),

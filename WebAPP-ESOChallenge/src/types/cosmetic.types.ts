@@ -24,6 +24,12 @@ export interface CosmeticImages {
   featured?: string
 }
 
+export interface Bundle {
+  name: string
+  info: string
+  image: string
+}
+
 export interface Cosmetic {
   id: string
   name: string
@@ -35,6 +41,19 @@ export interface Cosmetic {
   added?: string
   price: number
   isAvailable: boolean
+  bundle?: Bundle
+  isBundle?: boolean
+  containedItemIds?: string[]
+  containedItemsImages?: string[]
+  containedItems?: ContainedItem[]
+}
+
+export interface ContainedItem {
+  id: string
+  name: string
+  type?: CosmeticType
+  rarity?: CosmeticRarity
+  image?: string
 }
 
 export interface ApiResponse<T> {

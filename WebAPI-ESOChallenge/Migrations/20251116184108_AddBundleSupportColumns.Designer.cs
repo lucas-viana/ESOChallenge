@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WebAPI_ESOChallenge.Data;
@@ -11,9 +12,11 @@ using WebAPI_ESOChallenge.Data;
 namespace WebAPI_ESOChallenge.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251116184108_AddBundleSupportColumns")]
+    partial class AddBundleSupportColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -275,9 +278,6 @@ namespace WebAPI_ESOChallenge.Migrations
                     b.Property<string>("CosmeticId")
                         .HasColumnType("text");
 
-                    b.Property<string>("BundleId")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsRefunded")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -293,8 +293,6 @@ namespace WebAPI_ESOChallenge.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("UserId", "CosmeticId");
-
-                    b.HasIndex("BundleId");
 
                     b.HasIndex("CosmeticId");
 

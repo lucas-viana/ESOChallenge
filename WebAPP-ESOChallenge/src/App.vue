@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import { usePurchaseStore } from '@/stores/purchase.store'
+import { onMounted } from 'vue'
 
 const authStore = useAuthStore()
+const purchaseStore = usePurchaseStore()
+
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    await purchaseStore.fetchVBucks()
+  }
+})
 
 function handleLogout() {
   authStore.logout()
+  purchaseStore.reset()
 }
 </script>
 
@@ -20,16 +30,27 @@ function handleLogout() {
         <div class="nav-links">
           <RouterLink to="/">Home</RouterLink>
           <RouterLink to="/shop">🛒 Loja</RouterLink>
-          <RouterLink to="/about">Sobre</RouterLink>
           
-          <!-- Auth links -->
+          <!-- Authenticated user links -->
           <template v-if="authStore.isAuthenticated">
+            <RouterLink to="/my-items">💎 Meus Itens</RouterLink>
+            <RouterLink to="/purchase-history">📜 Histórico</RouterLink>
+            
+            <!-- V-Bucks Balance -->
+            <div class="vbucks-balance">
+              <span class="vbucks-icon">💰</span>
+              <span class="vbucks-amount">{{ purchaseStore.vbucks.toLocaleString() }}</span>
+            </div>
+            
             <span class="nav-user">{{ authStore.userEmail }}</span>
             <button @click="handleLogout" class="nav-logout">
               Sair
             </button>
           </template>
+          
+          <!-- Guest links -->
           <template v-else>
+            <RouterLink to="/about">Sobre</RouterLink>
             <RouterLink to="/login" class="nav-auth">Entrar</RouterLink>
             <RouterLink to="/register" class="nav-auth nav-auth--primary">
               Registrar
@@ -115,6 +136,26 @@ function handleLogout() {
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
+}
+
+.vbucks-balance {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  color: #1a1a2e;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.vbucks-icon {
+  font-size: 1.25rem;
+}
+
+.vbucks-amount {
+  font-size: 1rem;
 }
 
 .nav-logout {
