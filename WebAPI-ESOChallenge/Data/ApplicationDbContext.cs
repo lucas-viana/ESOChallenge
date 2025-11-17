@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using WebAPI_ESOChallenge.Features.Authentication.Models;
 using WebAPI_ESOChallenge.Features.Cosmetics.Models;
+using WebAPI_ESOChallenge.Features.Purchases.Models;
 
 namespace WebAPI_ESOChallenge.Data
 {
@@ -19,6 +20,7 @@ namespace WebAPI_ESOChallenge.Data
 
         // DbSets - Tabelas do banco
         public DbSet<Cosmetic> Cosmetics { get; set; } = null!;
+        public DbSet<UserCosmetic> UserCosmetics { get; set; } = null!;
 
         /// <summary>
         /// Configuração das entidades e relacionamentos
@@ -40,6 +42,14 @@ namespace WebAPI_ESOChallenge.Data
                 
                 entity.Property(c => c.Description)
                     .HasMaxLength(1000);
+
+                entity.Property(c => c.IsBundle)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(c => c.ContainedItemIdsJson)
+                    .IsRequired()
+                    .HasDefaultValue("[]");
 
                 // Relacionamento 1:1 com CosmeticType (Owned Entity)
                 entity.OwnsOne(c => c.Type, type =>
@@ -73,6 +83,39 @@ namespace WebAPI_ESOChallenge.Data
                     images.Property(i => i.Icon).HasMaxLength(500);
                     images.Property(i => i.Featured).HasMaxLength(500);
                 });
+            });
+
+            // ========================================
+            // Configuração da entidade UserCosmetic
+            // ========================================
+            builder.Entity<UserCosmetic>(entity =>
+            {
+                // Chave composta
+                entity.HasKey(uc => new { uc.UserId, uc.CosmeticId });
+
+                // Relacionamento com User
+                entity.HasOne(uc => uc.User)
+                    .WithMany(u => u.PurchasedCosmetics)
+                    .HasForeignKey(uc => uc.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Relacionamento com Cosmetic
+                entity.HasOne(uc => uc.Cosmetic)
+                    .WithMany()
+                    .HasForeignKey(uc => uc.CosmeticId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Configurações de campos
+                entity.Property(uc => uc.PurchasePrice).IsRequired();
+                entity.Property(uc => uc.PurchasedAt).IsRequired();
+                entity.Property(uc => uc.IsRefunded).IsRequired().HasDefaultValue(false);
+                entity.Property(uc => uc.BundleId).IsRequired(false);
+
+                // Índices para performance
+                entity.HasIndex(uc => uc.UserId);
+                entity.HasIndex(uc => uc.PurchasedAt);
+                entity.HasIndex(uc => uc.IsRefunded);
+                entity.HasIndex(uc => uc.BundleId);
             });
 
             // ========================================
