@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebAPI_ESOChallenge.Features.Cosmetics.Models
 {
@@ -16,10 +17,22 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics.Models
         public CosmeticImages? Images { get; set; }
         public DateTime? Added { get; set; }
         public int Price { get; set; }
-        public bool IsAvailable { get; set; }
-    }
+    public bool IsAvailable { get; set; }
+    public bool IsBundle { get; set; } = false;
+    public string ContainedItemIdsJson { get; set; } = "[]";
 
-    /// <summary>
+    [NotMapped]
+    public List<string> ContainedItemIds 
+    { 
+        get => string.IsNullOrEmpty(ContainedItemIdsJson) 
+            ? new List<string>() 
+            : System.Text.Json.JsonSerializer.Deserialize<List<string>>(ContainedItemIdsJson) ?? new List<string>();
+        set => ContainedItemIdsJson = System.Text.Json.JsonSerializer.Serialize(value);
+    }
+    
+    [NotMapped]
+    public BundleInfo? BundleInfo { get; set; }
+}    /// <summary>
     /// Tipo do cosmético (Outfit, Pickaxe, etc.)
     /// Entidade de valor - EF Core requer ID para rastreamento
     /// </summary>
@@ -59,5 +72,15 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics.Models
         public string? SmallIcon { get; set; }
         public string? Icon { get; set; }
         public string? Featured { get; set; }
+    }
+
+    /// <summary>
+    /// Informações do bundle
+    /// </summary>
+    public class BundleInfo
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Info { get; set; } = string.Empty;
+        public string? Image { get; set; }
     }
 }
