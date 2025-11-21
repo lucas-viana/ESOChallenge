@@ -6,7 +6,13 @@
 
 import { httpClient } from './httpClient.service'
 import { API_CONFIG } from '@/config/api.config'
-import type { Cosmetic, ApiResponse } from '@/types/cosmetic.types'
+import type {
+  Cosmetic,
+  ApiResponse,
+  CosmeticFilters,
+  PaginationParams,
+  SearchResponse,
+} from '@/types/cosmetic.types'
 
 export class CosmeticService {
   /**
@@ -69,6 +75,33 @@ export class CosmeticService {
       return response.data || null
     } catch (error) {
       console.error(`Erro ao buscar cosmético ${id}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Busca cosméticos com filtros avançados, paginação e ordenação
+   */
+  async searchCosmetics(
+    filters: CosmeticFilters & PaginationParams,
+    signal?: AbortSignal,
+  ): Promise<SearchResponse> {
+    try {
+      const response = await httpClient.post<any>(
+        `${API_CONFIG.ENDPOINTS.COSMETICS.ALL}/search`,
+        filters,
+        signal,
+      )
+
+      // A API retorna { success, data, pagination, filters }
+      // Precisamos mapear para o formato esperado
+      return {
+        items: response.data || [],
+        pagination: response.pagination,
+        filters: response.filters,
+      }
+    } catch (error) {
+      console.error('Erro ao buscar cosméticos com filtros:', error)
       throw error
     }
   }

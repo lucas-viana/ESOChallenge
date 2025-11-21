@@ -40,7 +40,8 @@ export interface Cosmetic {
   images?: CosmeticImages
   added?: string
   price: number
-  isAvailable: boolean
+  isInShop: boolean
+  isNew: boolean
   bundle?: Bundle
   isBundle?: boolean
   containedItemIds?: string[]
@@ -67,4 +68,48 @@ export interface ErrorResponse {
   success: boolean
   message: string
   error?: string
+}
+
+// Filtros e Paginação
+export interface CosmeticFilters {
+  searchTerm?: string
+  types?: string[]
+  rarities?: string[]
+  addedAfter?: string
+  addedBefore?: string
+  onlyNew?: boolean
+  onlyInShop?: boolean
+  excludeBundles?: boolean
+  minPrice?: number
+  maxPrice?: number
+  sortBy?: 'name' | 'price' | 'rarity' | 'added'
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface PaginationParams {
+  page: number
+  pageSize: number
+}
+
+export interface PaginationInfo {
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+}
+
+export interface FilterMetadata {
+  availableTypes: Record<string, number>
+  availableRarities: Record<string, number>
+  minPriceAvailable: number
+  maxPriceAvailable: number
+}
+
+export interface SearchResponse {
+  success: boolean
+  data: Cosmetic[]
+  pagination: PaginationInfo
+  filters: FilterMetadata
 }
