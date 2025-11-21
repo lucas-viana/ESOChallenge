@@ -36,8 +36,11 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics.Dtos
         [JsonPropertyName("price")]
         public int Price { get; set; }
 
-        [JsonPropertyName("isAvailable")]
-        public bool IsAvailable { get; set; }
+        [JsonPropertyName("isInShop")]
+        public bool IsInShop { get; set; }
+
+        [JsonPropertyName("isNew")]
+        public bool IsNew { get; set; }
 
         [JsonPropertyName("isBundle")]
         public bool IsBundle { get; set; }
