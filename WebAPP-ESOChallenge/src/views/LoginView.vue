@@ -1,4 +1,4 @@
-<!-- 
+<!--
   LoginView
   Tela de login seguindo Clean Architecture
 -->
@@ -21,11 +21,11 @@ const password = ref('')
 const validationErrors = ref<ValidationError[]>([])
 
 // Computed para erros específicos de cada campo
-const emailError = computed(() => 
+const emailError = computed(() =>
   validationErrors.value.find(e => e.field === 'email')?.message ?? ''
 )
 
-const passwordError = computed(() => 
+const passwordError = computed(() =>
   validationErrors.value.find(e => e.field === 'password')?.message ?? ''
 )
 
@@ -58,7 +58,7 @@ async function handleSubmit() {
     })
 
     // Redirecionar para página de cosméticos após login
-    router.push('/cosmetics')
+    router.push('/shop')
   } catch (error) {
     // Erro já está no store
     console.error('Login error:', error)

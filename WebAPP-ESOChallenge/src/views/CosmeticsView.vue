@@ -2,156 +2,217 @@
   <div class="cosmetics-view">
     <!-- Header -->
     <header class="cosmetics-header">
-      <h1 class="cosmetics-title">Fortnite Cosméticos</h1>
-      <p class="cosmetics-subtitle">
-        Explore os cosméticos mais recentes do Fortnite
-      </p>
-
-      <!-- Filtros -->
-      <div class="cosmetics-filters">
-        <button
-          v-for="filter in filters"
-          :key="filter.value"
-          :class="['filter-btn', { active: activeFilter === filter.value }]"
-          @click="handleFilterChange(filter.value)"
-        >
-          {{ filter.label }}
-        </button>
+      <div class="cosmetics-header-content">
+        <h1 class="cosmetics-title">📚 Coleção Completa</h1>
+        <p class="cosmetics-subtitle">Explore todos os itens do Fortnite</p>
       </div>
     </header>
 
-    <!-- Loading State -->
-    <LoadingSpinner v-if="cosmeticStore.loading" message="Carregando cosméticos..." />
+    <!-- Main Container: FilterSidebar + Content -->
+    <div class="cosmetics-main-container">
+      <div class="cosmetics-content-wrapper">
+        <!-- FilterSidebar -->
+        <div class="sidebar-wrapper">
+          <FilterSidebar
+            :filters="filters"
+            :metadata="cosmeticStore.searchMetadata"
+            :hide-shop-filter="true"
+            @update:filters="updateFilters"
+            @apply="performSearch"
+          />
+        </div>
 
-    <!-- Error State -->
-    <ErrorMessage
-      v-else-if="cosmeticStore.error"
-      :message="cosmeticStore.error"
-      @retry="handleRetry"
+        <!-- Content Area -->
+        <div class="items-wrapper">
+          <main class="cosmetics-content">
+            <!-- Loading State -->
+            <LoadingSpinner
+              v-if="cosmeticStore.isSearching"
+              message="Carregando cosméticos..."
+            />
+
+            <!-- Error State -->
+            <ErrorMessage
+              v-else-if="cosmeticStore.error"
+              :message="cosmeticStore.error"
+              @retry="performSearch"
+            />
+
+            <!-- Empty State -->
+            <div v-else-if="!searchResults || searchResults.length === 0" class="empty-state">
+              <div class="empty-icon">📦</div>
+              <h3 class="empty-title">Nenhum cosmético encontrado</h3>
+              <p class="empty-description">Tente ajustar os filtros para ver mais resultados</p>
+            </div>
+
+            <!-- Scrollable Grid Container -->
+            <div v-else-if="searchResults && searchResults.length > 0" class="grid-container">
+              <div class="cosmetics-grid">
+                <CosmeticCardCompact
+                  v-for="cosmetic in searchResults"
+                  :key="cosmetic.id"
+                  :cosmetic="cosmetic"
+                  :show-purchase-button="false"
+                  @click="openDetailModal"
+                />
+              </div>
+            </div>
+
+            <!-- Paginação -->
+            <nav v-if="totalPages > 1 && !cosmeticStore.isSearching" class="pagination">
+              <button
+                class="pagination-btn"
+                :disabled="!hasPreviousPage"
+                @click="goToPage(currentPage - 1)"
+              >
+                ← Anterior
+              </button>
+
+              <div class="pagination-numbers">
+                <button
+                  v-for="page in visiblePages"
+                  :key="page"
+                  :class="[
+                    'pagination-number',
+                    { active: page === currentPage, ellipsis: page === -1 },
+                  ]"
+                  @click="page !== -1 && goToPage(page)"
+                >
+                  {{ page === -1 ? '...' : page }}
+                </button>
+              </div>
+
+              <button
+                class="pagination-btn"
+                :disabled="!hasNextPage"
+                @click="goToPage(currentPage + 1)"
+              >
+                Próxima →
+              </button>
+            </nav>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <CosmeticDetailModal
+      :cosmetic="selectedCosmetic"
+      :is-open="isModalOpen"
+      :show-purchase-button="false"
+      @close="closeDetailModal"
     />
-
-    <!-- Empty State -->
-    <div v-else-if="!cosmeticStore.hasCosmetics" class="empty-state">
-      <div class="empty-icon">📦</div>
-      <h3 class="empty-title">Nenhum cosmético encontrado</h3>
-      <p class="empty-description">
-        Tente carregar os dados ou verifique sua conexão.
-      </p>
-      <button @click="handleRetry" class="load-btn">
-        Carregar Cosméticos
-      </button>
-    </div>
-
-    <!-- Cosmetics Grid -->
-    <div v-else class="cosmetics-container">
-      <!-- Stats -->
-      <div class="cosmetics-stats">
-        <span class="stat-item">
-          Total: <strong>{{ cosmeticStore.cosmeticsCount }}</strong> itens
-        </span>
-      </div>
-
-      <!-- Grid de Cards -->
-      <div class="cosmetics-grid">
-        <CosmeticCard
-          v-for="cosmetic in cosmeticStore.cosmetics"
-          :key="cosmetic.id"
-          :cosmetic="cosmetic"
-        />
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCosmeticStore } from '@/stores/cosmetic.store'
-import CosmeticCard from '@/components/CosmeticCard.vue'
+import FilterSidebar from '@/components/FilterSidebar.vue'
+import CosmeticCardCompact from '@/components/CosmeticCardCompact.vue'
+import CosmeticDetailModal from '@/components/CosmeticDetailModal.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ErrorMessage.vue'
+import type { CosmeticFilters, Cosmetic } from '@/types/cosmetic.types'
 
-/**
- * View principal de Cosméticos
- * Componente "Smart" que orquestra a lógica e os componentes de apresentação
- * Segue o padrão Container/Presentational Components
- */
-
-// State Management
 const cosmeticStore = useCosmeticStore()
 
-// Tipos de filtro
-type FilterType = 'new' | 'all' | 'shop'
+// Modal State
+const selectedCosmetic = ref<Cosmetic | null>(null)
+const isModalOpen = ref(false)
 
-interface Filter {
-  value: FilterType
-  label: string
-  action: () => Promise<void>
-}
-
-// Estado local
-const activeFilter = ref<FilterType>('new')
-
-const filters: Filter[] = [
-  {
-    value: 'new',
-    label: 'Novos',
-    action: () => cosmeticStore.fetchNewCosmetics(),
-  },
-  {
-    value: 'all',
-    label: 'Todos',
-    action: () => cosmeticStore.fetchAllCosmetics(),
-  },
-  {
-    value: 'shop',
-    label: 'Loja',
-    action: () => cosmeticStore.fetchShopCosmetics(),
-  },
-]
-
-// Métodos
-async function handleFilterChange(filterValue: FilterType) {
-  activeFilter.value = filterValue
-  const filter = filters.find((f) => f.value === filterValue)
-  if (filter) {
-    await filter.action()
-  }
-}
-
-async function handleRetry() {
-  const filter = filters.find((f) => f.value === activeFilter.value)
-  if (filter) {
-    await filter.action()
-  }
-}
-
-// Lifecycle Hooks
-onMounted(async () => {
-  // Carrega cosméticos novos ao montar o componente
-  await cosmeticStore.fetchNewCosmetics()
+// Filters State
+const filters = ref<CosmeticFilters>({
+  searchTerm: '',
+  types: [],
+  rarities: [],
+  onlyNew: false,
+  onlyInShop: false,
+  excludeBundles: false,
+  sortBy: 'added',
+  sortOrder: 'desc',
 })
 
-onUnmounted(() => {
-  // Cancela requisições pendentes ao desmontar
-  cosmeticStore.cancelRequest()
+// Computed
+const searchResults = computed(() => cosmeticStore.searchResults)
+const currentPage = computed(() => cosmeticStore.searchPagination.page)
+const totalCount = computed(() => cosmeticStore.searchPagination.totalCount)
+const totalPages = computed(() => cosmeticStore.searchPagination.totalPages)
+const hasPreviousPage = computed(() => cosmeticStore.searchPagination.hasPreviousPage)
+const hasNextPage = computed(() => cosmeticStore.searchPagination.hasNextPage)
+
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const current = currentPage.value
+  const total = totalPages.value
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push(-1)
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      pages.push(i)
+    }
+    if (current < total - 2) pages.push(-1)
+    pages.push(total)
+  }
+
+  return pages
+})
+
+// Methods
+const updateFilters = (newFilters: CosmeticFilters) => {
+  filters.value = { ...newFilters }
+}
+
+const performSearch = async () => {
+  await cosmeticStore.searchCosmetics(filters.value, 1)
+}
+
+const openDetailModal = (cosmetic: Cosmetic) => {
+  selectedCosmetic.value = cosmetic
+  isModalOpen.value = true
+}
+
+const closeDetailModal = () => {
+  isModalOpen.value = false
+  selectedCosmetic.value = null
+}
+
+const goToPage = async (page: number) => {
+  if (page < 1 || page > totalPages.value) return
+  await cosmeticStore.searchCosmetics(filters.value, page)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// Lifecycle
+onMounted(async () => {
+  await performSearch()
 })
 </script>
 
 <style scoped>
 .cosmetics-view {
   min-height: 100vh;
-  padding: 24px;
-  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
 }
 
 .cosmetics-header {
+  margin-bottom: 1%;
   text-align: center;
-  margin-bottom: 48px;
+}
+
+.cosmetics-header-content {
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .cosmetics-title {
   font-size: 3rem;
-  font-weight: 800;
+  font-weight: 900;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -160,129 +221,220 @@ onUnmounted(() => {
 }
 
 .cosmetics-subtitle {
-  font-size: 1.25rem;
-  color: #9ca3af;
-  margin: 0 0 32px 0;
+  color: #cbd5e0;
+  font-size: 1.125rem;
+  margin: 0;
 }
 
-.cosmetics-filters {
+/* Main Container */
+.cosmetics-main-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.cosmetics-content-wrapper {
   display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
+  gap: 24px;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  height: calc(100vh - 240px);
+  overflow: hidden;
 }
 
-.filter-btn {
-  padding: 12px 24px;
+.sidebar-wrapper {
+  flex-shrink: 0;
+  height: 100%;
+  display: flex;
+}
+
+.items-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Content Area */
+.cosmetics-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Grid Container with Scroll */
+.grid-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.grid-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.grid-container::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
-  color: #9ca3af;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  border-radius: 4px;
 }
 
-.filter-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+.grid-container::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.5);
+  border-radius: 4px;
 }
 
-.filter-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+.grid-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.7);
 }
 
+/* Grid */
+.cosmetics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding-bottom: 20px;
+}
+
+/* Empty State */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 96px 24px;
+  min-height: 400px;
   text-align: center;
+  gap: 16px;
 }
 
 .empty-icon {
   font-size: 4rem;
+  opacity: 0.5;
 }
 
 .empty-title {
-  font-size: 1.5rem;
-  font-weight: 700;
   color: #ffffff;
+  font-size: 1.5rem;
   margin: 0;
 }
 
 .empty-description {
+  color: #b4b4b4;
   font-size: 1rem;
-  color: #9ca3af;
   margin: 0;
-  max-width: 400px;
 }
 
-.load-btn {
-  margin-top: 16px;
-  padding: 14px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
-}
-
-.load-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-}
-
-.load-btn:active {
-  transform: translateY(0);
-}
-
-.cosmetics-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.cosmetics-stats {
+/* Pagination */
+.pagination {
   display: flex;
   justify-content: center;
-  margin-bottom: 32px;
-  padding: 16px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.pagination-btn {
+  padding: 10px 20px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-}
-
-.stat-item {
-  font-size: 1rem;
-  color: #9ca3af;
-}
-
-.stat-item strong {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.cosmetics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-  padding-bottom: 48px;
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+  transform: translateY(-2px);
 }
 
-/* Responsividade */
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-number {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #b4b4b4;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pagination-number:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.pagination-number.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: #ffffff;
+}
+
+.pagination-number.ellipsis {
+  cursor: default;
+  background: transparent;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.pagination-number.ellipsis:hover {
+  background: transparent;
+  border-color: transparent;
+  transform: none;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .cosmetics-content-wrapper {
+    flex-direction: column;
+    height: auto;
+    max-height: calc(100vh - 240px);
+  }
+
+  .sidebar-wrapper {
+    height: auto;
+    max-height: 400px;
+  }
+
+  .items-wrapper {
+    flex: 1;
+    min-height: 500px;
+  }
+
+  .cosmetics-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+}
+
 @media (max-width: 768px) {
   .cosmetics-view {
-    padding: 16px;
+    padding: 60px 0 24px;
+  }
+
+  .cosmetics-main-container {
+    padding: 0 16px;
   }
 
   .cosmetics-title {
@@ -294,19 +446,11 @@ onUnmounted(() => {
   }
 
   .cosmetics-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 
-  .filter-btn {
-    padding: 10px 20px;
-    font-size: 0.875rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .cosmetics-grid {
-    grid-template-columns: 1fr;
+  .pagination-numbers {
+    display: none;
   }
 }
 </style>

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WebAPI_ESOChallenge.Data;
@@ -11,9 +12,11 @@ using WebAPI_ESOChallenge.Data;
 namespace WebAPI_ESOChallenge.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251121014854_RenameIsAvailableToIsInShop")]
+    partial class RenameIsAvailableToIsInShop
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -252,9 +255,6 @@ namespace WebAPI_ESOChallenge.Migrations
                         .HasDefaultValue(false);
 
                     b.Property<bool>("IsInShop")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsNew")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")

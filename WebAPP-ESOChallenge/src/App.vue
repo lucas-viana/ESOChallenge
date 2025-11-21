@@ -23,38 +23,33 @@ function handleLogout() {
   <div id="app">
     <nav class="main-nav">
       <div class="nav-container">
-        <RouterLink to="/" class="nav-logo">
-          🎮 Fortnite API
-        </RouterLink>
-        
+        <RouterLink to="/" class="nav-logo"> 🎮 Fortnite API </RouterLink>
+
         <div class="nav-links">
           <RouterLink to="/">Home</RouterLink>
+          <RouterLink to="/cosmetics">📚 Coleção</RouterLink>
           <RouterLink to="/shop">🛒 Loja</RouterLink>
-          
+
           <!-- Authenticated user links -->
           <template v-if="authStore.isAuthenticated">
-            <RouterLink to="/my-items">💎 Meus Itens</RouterLink>
+            <RouterLink to="/inventory">👜 Inventário</RouterLink>
             <RouterLink to="/purchase-history">📜 Histórico</RouterLink>
-            
+
             <!-- V-Bucks Balance -->
             <div class="vbucks-balance">
               <span class="vbucks-icon">💰</span>
               <span class="vbucks-amount">{{ purchaseStore.vbucks.toLocaleString() }}</span>
             </div>
-            
+
             <span class="nav-user">{{ authStore.userEmail }}</span>
-            <button @click="handleLogout" class="nav-logout">
-              Sair
-            </button>
+            <button @click="handleLogout" class="nav-logout">Sair</button>
           </template>
-          
+
           <!-- Guest links -->
           <template v-else>
             <RouterLink to="/about">Sobre</RouterLink>
             <RouterLink to="/login" class="nav-auth">Entrar</RouterLink>
-            <RouterLink to="/register" class="nav-auth nav-auth--primary">
-              Registrar
-            </RouterLink>
+            <RouterLink to="/register" class="nav-auth nav-auth--primary"> Registrar </RouterLink>
           </template>
         </div>
       </div>

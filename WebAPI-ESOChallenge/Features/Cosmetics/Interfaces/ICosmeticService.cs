@@ -15,6 +15,11 @@ public interface ICosmeticService
     Task<IEnumerable<CosmeticResponseDto>> GetShopCosmeticsAsync();
     Task<CosmeticResponseDto?> GetCosmeticByIdAsync(string id);
     
+    // Busca avançada com filtros e paginação
+    Task<PaginatedCosmeticsResponse> SearchCosmeticsAsync(CosmeticFilterRequest filters);
+    
     // Métodos para persistência/administração (retornam entidades de domínio)
     Task<IEnumerable<Cosmetic>> GetShopCosmeticsForPersistenceAsync();
+    Task<IEnumerable<Cosmetic>> GetAllCosmeticsForPersistenceAsync();
+    Task<IEnumerable<Cosmetic>> GetNewCosmeticsForPersistenceAsync();
 }

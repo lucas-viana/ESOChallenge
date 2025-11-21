@@ -17,9 +17,10 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics.Models
         public CosmeticImages? Images { get; set; }
         public DateTime? Added { get; set; }
         public int Price { get; set; }
-    public bool IsAvailable { get; set; }
-    public bool IsBundle { get; set; } = false;
-    public string ContainedItemIdsJson { get; set; } = "[]";
+        public bool IsInShop { get; set; } = false;
+        public bool IsNew { get; set; } = false;
+        public bool IsBundle { get; set; } = false;
+        public string ContainedItemIdsJson { get; set; } = "[]";
 
     [NotMapped]
     public List<string> ContainedItemIds 

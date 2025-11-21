@@ -50,6 +50,11 @@
       >
         {{ cosmetic.rarity.displayValue }}
       </div>
+
+      <!-- Badge de Novo -->
+      <div v-if="cosmetic.isNew" class="cosmetic-card__new-badge">
+        ✨ NEW
+      </div>
     </div>
 
     <!-- Imagem Única (não bundle ou sem imagens de carrossel) -->
@@ -69,6 +74,11 @@
         :class="`rarity-${rarityClass}`"
       >
         {{ cosmetic.rarity.displayValue }}
+      </div>
+
+      <!-- Badge de Novo -->
+      <div v-if="cosmetic.isNew" class="cosmetic-card__new-badge">
+        ✨ NOVO
       </div>
     </div>
 
@@ -450,6 +460,37 @@ async function handlePurchase() {
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
   backdrop-filter: blur(8px);
+}
+
+/* Badge de Novo */
+.cosmetic-card__new-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+  backdrop-filter: blur(8px);
+  z-index: 4;
+  animation: newBadgePulse 2s ease-in-out infinite;
+}
+
+@keyframes newBadgePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.7);
+  }
 }
 
 .cosmetic-card__bundle-info {

@@ -32,7 +32,9 @@ export const purchaseService = {
    * Refund a previously purchased cosmetic
    */
   async refundCosmetic(cosmeticId: string): Promise<RefundResponse> {
+    console.log('🔄 Refund Request - cosmeticId:', cosmeticId)
     const request: RefundRequest = { cosmeticId }
+    console.log('🔄 Refund Request - payload:', JSON.stringify(request))
     return await httpClient.post<RefundResponse>(`${API_BASE}/refund`, request)
   },
 

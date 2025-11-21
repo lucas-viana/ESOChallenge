@@ -7,7 +7,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { cosmeticService } from '@/services/cosmetic.service'
-import type { Cosmetic } from '@/types/cosmetic.types'
+import type {
+  Cosmetic,
+  CosmeticFilters,
+  PaginationInfo,
+  FilterMetadata,
+} from '@/types/cosmetic.types'
 
 export const useCosmeticStore = defineStore('cosmetic', () => {
   // State (Dados reativos)
@@ -16,11 +21,25 @@ export const useCosmeticStore = defineStore('cosmetic', () => {
   const error = ref<string | null>(null)
   const abortController = ref<AbortController | null>(null)
 
+  // State de Busca Avançada
+  const searchResults = ref<Cosmetic[]>([])
+  const searchPagination = ref<PaginationInfo>({
+    totalCount: 0,
+    page: 1,
+    pageSize: 24,
+    totalPages: 0,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  })
+  const searchMetadata = ref<FilterMetadata | undefined>(undefined)
+  const isSearching = ref(false)
+  const searchAbortController = ref<AbortController | null>(null)
+
   // Getters (Computados - dados derivados do estado)
   const cosmeticsCount = computed(() => cosmetics.value.length)
-  
+
   const hasCosmetics = computed(() => cosmetics.value.length > 0)
-  
+
   const cosmeticsByRarity = computed(() => {
     const grouped = new Map<string, Cosmetic[]>()
     for (const cosmetic of cosmetics.value) {
@@ -34,7 +53,7 @@ export const useCosmeticStore = defineStore('cosmetic', () => {
   })
 
   // Actions (Métodos que modificam o estado)
-  
+
   /**
    * Reseta o estado para valores iniciais
    */
@@ -65,7 +84,7 @@ export const useCosmeticStore = defineStore('cosmetic', () => {
 
       abortController.value = new AbortController()
       const data = await cosmeticService.getAllCosmetics(abortController.value.signal)
-      
+
       cosmetics.value = data
     } catch (err) {
       if (err instanceof Error) {
@@ -92,7 +111,7 @@ export const useCosmeticStore = defineStore('cosmetic', () => {
 
       abortController.value = new AbortController()
       const data = await cosmeticService.getNewCosmetics(abortController.value.signal)
-      
+
       cosmetics.value = data
     } catch (err) {
       if (err instanceof Error) {
@@ -118,7 +137,7 @@ export const useCosmeticStore = defineStore('cosmetic', () => {
 
       abortController.value = new AbortController()
       const data = await cosmeticService.getShopCosmetics(abortController.value.signal)
-      
+
       cosmetics.value = data
     } catch (err) {
       if (err instanceof Error) {
@@ -153,24 +172,87 @@ export const useCosmeticStore = defineStore('cosmetic', () => {
     }
   }
 
+  /**
+   * Busca cosméticos com filtros avançados e paginação
+   */
+  async function searchCosmetics(filters: CosmeticFilters, page: number = 1) {
+    try {
+      isSearching.value = true
+      error.value = null
+
+      // Cancela busca anterior se existir
+      if (searchAbortController.value) {
+        searchAbortController.value.abort()
+      }
+
+      searchAbortController.value = new AbortController()
+
+      const response = await cosmeticService.searchCosmetics(
+        { ...filters, page, pageSize: 24 },
+        searchAbortController.value.signal,
+      )
+
+      searchResults.value = response.items || []
+      searchPagination.value = response.pagination
+      searchMetadata.value = response.filters
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.name !== 'AbortError') {
+          error.value = err.message
+          console.error('Erro ao buscar cosméticos:', err)
+          // Garante que searchResults seja um array vazio em caso de erro
+          searchResults.value = []
+        }
+      }
+    } finally {
+      isSearching.value = false
+      searchAbortController.value = null
+    }
+  }
+
+  /**
+   * Reseta resultados da busca
+   */
+  function resetSearch() {
+    searchResults.value = []
+    searchPagination.value = {
+      totalCount: 0,
+      page: 1,
+      pageSize: 24,
+      totalPages: 0,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    }
+    searchMetadata.value = undefined
+    isSearching.value = false
+  }
+
   // Retorna o estado e as ações
   return {
     // State
     cosmetics,
     loading,
     error,
-    
+
+    // State de Busca
+    searchResults,
+    searchPagination,
+    searchMetadata,
+    isSearching,
+
     // Getters
     cosmeticsCount,
     hasCosmetics,
     cosmeticsByRarity,
-    
+
     // Actions
     fetchAllCosmetics,
     fetchNewCosmetics,
     fetchShopCosmetics,
     getCosmeticById,
+    searchCosmetics,
     resetState,
+    resetSearch,
     cancelRequest,
   }
 })

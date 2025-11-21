@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebAPI_ESOChallenge.Features.Cosmetics.Interfaces;
+using WebAPI_ESOChallenge.Features.Cosmetics.Dtos;
 using Microsoft.Extensions.Logging;
 
 namespace WebAPI_ESOChallenge.Features.Cosmetics
@@ -105,6 +106,53 @@ namespace WebAPI_ESOChallenge.Features.Cosmetics
             {
                 _logger.LogError(ex, "Erro ao processar requisição do cosmético {CosmeticId}", id);
                 return StatusCode(500, new { success = false, message = "Erro ao buscar cosmético", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Busca cosméticos com filtros avançados, paginação e ordenação
+        /// POST /api/cosmetics/search
+        /// </summary>
+        [HttpPost("search")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> SearchCosmetics([FromBody] CosmeticFilterRequest filters)
+        {
+            try
+            {
+                _logger.LogInformation("Requisição de busca recebida - Página: {Page}, Busca: {Search}", 
+                    filters.Page, filters.SearchTerm ?? "nenhuma");
+                
+                var result = await _cosmeticService.SearchCosmeticsAsync(filters);
+                
+                return Ok(new 
+                { 
+                    success = true, 
+                    data = result.Items,
+                    pagination = new 
+                    {
+                        totalCount = result.TotalCount,
+                        page = result.Page,
+                        pageSize = result.PageSize,
+                        totalPages = result.TotalPages,
+                        hasPreviousPage = result.HasPreviousPage,
+                        hasNextPage = result.HasNextPage
+                    },
+                    filters = new
+                    {
+                        availableTypes = result.AvailableTypes,
+                        availableRarities = result.AvailableRarities,
+                        minPriceAvailable = result.MinPriceAvailable,
+                        maxPriceAvailable = result.MaxPriceAvailable
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao processar busca de cosméticos");
+                return StatusCode(500, new { success = false, message = "Erro ao buscar cosméticos", error = ex.Message });
             }
         }
     }
