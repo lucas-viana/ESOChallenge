@@ -8,264 +8,264 @@
       </div>
     </header>
 
-    <!-- Tabs Navigation -->
-    <div class="tabs-container">
-      <div class="tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          :class="['tab-btn', { active: activeTab === tab.id }]"
-          @click="changeTab(tab.id)"
-        >
-          <span class="tab-emoji">{{ tab.emoji }}</span>
-          <span class="tab-label">{{ tab.label }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Tab Content: Em Promoção -->
-    <div v-if="activeTab === 'shop'" class="tab-content">
-      <LoadingSpinner v-if="cosmeticStore.loading" message="Carregando itens da loja..." />
-      <ErrorMessage
-        v-else-if="cosmeticStore.error"
-        :message="cosmeticStore.error"
-        @retry="loadShopItems"
-      />
-      <div v-else-if="!cosmeticStore.hasCosmetics" class="empty-state">
-        <div class="empty-icon">🛍️</div>
-        <h3 class="empty-title">Loja Vazia</h3>
-        <p class="empty-description">Não há itens disponíveis na loja no momento.</p>
-        <button @click="loadShopItems" class="load-btn">Atualizar Loja</button>
-      </div>
-      <div v-else class="shop-container">
-        <div class="shop-stats-card">
-          <div class="stat-item">
-            <span class="stat-label">Itens em Promoção</span>
-            <span class="stat-value">{{ filteredShopCosmetics.length }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Última Atualização</span>
-            <span class="stat-value">{{ currentDate }}</span>
-          </div>
-        </div>
-        <div class="shop-grid">
-          <CosmeticCard
-            v-for="cosmetic in filteredShopCosmetics"
-            :key="cosmetic.id"
-            :cosmetic="cosmetic"
-            :show-purchase-button="authStore.isAuthenticated"
-            @purchased="handlePurchase"
+    <!-- Main Container: FilterSidebar + Content -->
+    <div class="shop-main-container">
+      <div class="shop-content-wrapper">
+        <!-- FilterSidebar -->
+        <div class="sidebar-wrapper">
+          <FilterSidebar
+            :filters="filters"
+            :metadata="cosmeticStore.searchMetadata"
+            :hide-shop-filter="true"
+            @update:filters="updateFilters"
+            @apply="performSearch"
           />
         </div>
+
+        <!-- Content Area -->
+        <div class="items-wrapper">
+          <main class="shop-content">
+            <!-- Loading State -->
+            <LoadingSpinner
+              v-if="cosmeticStore.isSearching"
+              message="Carregando itens da loja..."
+            />
+
+            <!-- Error State -->
+            <ErrorMessage
+              v-else-if="cosmeticStore.error"
+              :message="cosmeticStore.error"
+              @retry="performSearch"
+            />
+
+            <!-- Empty State -->
+            <div v-else-if="!searchResults || searchResults.length === 0" class="empty-state">
+              <div class="empty-icon">🛍️</div>
+              <h3 class="empty-title">Nenhum item encontrado</h3>
+              <p class="empty-description">Tente ajustar os filtros para ver mais resultados</p>
+            </div>
+
+            <!-- Scrollable Grid Container -->
+            <div v-else-if="searchResults && searchResults.length > 0" class="grid-container">
+              <div class="shop-grid">
+                <CosmeticCardCompact
+                  v-for="cosmetic in searchResults"
+                  :key="cosmetic.id"
+                  :cosmetic="cosmetic"
+                  :show-purchase-button="authStore.isAuthenticated && !isItemOwned(cosmetic)"
+                  @click="openDetailModal"
+                  @purchased="openPurchaseConfirmation"
+                />
+              </div>
+            </div>
+
+            <!-- Paginação -->
+            <nav v-if="totalPages > 1 && !cosmeticStore.isSearching" class="pagination">
+              <button
+                class="pagination-btn"
+                :disabled="!hasPreviousPage"
+                @click="goToPage(currentPage - 1)"
+              >
+                ← Anterior
+              </button>
+
+              <div class="pagination-numbers">
+                <button
+                  v-for="page in visiblePages"
+                  :key="page"
+                  :class="[
+                    'pagination-number',
+                    { active: page === currentPage, ellipsis: page === -1 },
+                  ]"
+                  :disabled="page === -1"
+                  @click="page !== -1 && goToPage(page)"
+                >
+                  {{ page === -1 ? '...' : page }}
+                </button>
+              </div>
+
+              <button
+                class="pagination-btn"
+                :disabled="!hasNextPage"
+                @click="goToPage(currentPage + 1)"
+              >
+                Próxima →
+              </button>
+            </nav>
+          </main>
+        </div>
       </div>
     </div>
 
-    <!-- Tab Content: Novos Lançamentos -->
-    <div v-if="activeTab === 'new'" class="tab-content">
-      <LoadingSpinner v-if="newLoading" message="Carregando novos lançamentos..." />
-      <ErrorMessage v-else-if="newError" :message="newError" @retry="loadNewItems" />
-      <div v-else-if="newCosmetics.length === 0" class="empty-state">
-        <div class="empty-icon">✨</div>
-        <h3 class="empty-title">Nenhum Lançamento</h3>
-        <p class="empty-description">Não há novos itens disponíveis no momento.</p>
-        <button @click="loadNewItems" class="load-btn">Atualizar</button>
-      </div>
-      <div v-else class="shop-container">
-        <div class="shop-stats-card">
-          <div class="stat-item">
-            <span class="stat-label">Novos Lançamentos</span>
-            <span class="stat-value">{{ newCosmetics.length }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Última Atualização</span>
-            <span class="stat-value">{{ currentDate }}</span>
-          </div>
-        </div>
-        <div class="shop-grid">
-          <CosmeticCard v-for="cosmetic in newCosmetics" :key="cosmetic.id" :cosmetic="cosmetic" />
-        </div>
-      </div>
-    </div>
+    <!-- Modal de Detalhes -->
+    <CosmeticDetailModal
+      :cosmetic="selectedCosmetic"
+      :is-open="isModalOpen"
+      :show-purchase-button="authStore.isAuthenticated && !isItemOwned(selectedCosmetic)"
+      @close="closeDetailModal"
+      @purchased="openPurchaseConfirmation"
+    />
 
-    <!-- Tab Content: Todos os Itens (com paginação) -->
-    <div v-if="activeTab === 'all'" class="tab-content">
-      <LoadingSpinner v-if="allLoading" message="Carregando todos os itens..." />
-      <ErrorMessage v-else-if="allError" :message="allError" @retry="loadAllItems" />
-      <div v-else-if="allCosmetics.length === 0" class="empty-state">
-        <div class="empty-icon">📦</div>
-        <h3 class="empty-title">Nenhum Item</h3>
-        <p class="empty-description">Não há itens disponíveis no momento.</p>
-        <button @click="loadAllItems" class="load-btn">Atualizar</button>
-      </div>
-      <div v-else class="shop-container">
-        <div class="shop-stats-card">
-          <div class="stat-item">
-            <span class="stat-label">Total de Itens</span>
-            <span class="stat-value">{{ filteredAllCosmetics.length }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Mostrando</span>
-            <span class="stat-value"
-              >{{ displayedItems.length }} de {{ filteredAllCosmetics.length }}</span
-            >
-          </div>
-        </div>
-        <div class="shop-grid">
-          <CosmeticCard
-            v-for="cosmetic in displayedItems"
-            :key="cosmetic.id"
-            :cosmetic="cosmetic"
-          />
-        </div>
-        <div v-if="hasMoreItems" class="load-more-container">
-          <button @click="loadMore" class="load-more-btn">
-            Carregar Mais ({{ remainingItems }} restantes)
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Modal de Confirmação de Compra -->
+    <PurchaseConfirmationModal
+      :cosmetic="cosmeticToPurchase"
+      :is-open="isConfirmationModalOpen"
+      :current-v-bucks="purchaseStore.vbucks"
+      :is-purchasing="isPurchasing"
+      @close="closePurchaseConfirmation"
+      @confirm="confirmPurchase"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCosmeticStore } from '@/stores/cosmetic.store'
 import { usePurchaseStore } from '@/stores/purchase.store'
 import { useAuthStore } from '@/stores/auth.store'
-import CosmeticCard from '@/components/CosmeticCard.vue'
+import FilterSidebar from '@/components/FilterSidebar.vue'
+import CosmeticCardCompact from '@/components/CosmeticCardCompact.vue'
+import CosmeticDetailModal from '@/components/CosmeticDetailModal.vue'
+import PurchaseConfirmationModal from '@/components/PurchaseConfirmationModal.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import ErrorMessage from '@/components/ErrorMessage.vue'
-import type { Cosmetic } from '@/types/cosmetic.types'
+import type { CosmeticFilters, Cosmetic } from '@/types/cosmetic.types'
 
 const cosmeticStore = useCosmeticStore()
 const purchaseStore = usePurchaseStore()
 const authStore = useAuthStore()
 
-// Tabs
-const tabs = [
-  { id: 'shop', label: 'Em Promoção', emoji: '🔥' },
-  { id: 'new', label: 'Novos Lançamentos', emoji: '✨' },
-  { id: 'all', label: 'Todos os Itens', emoji: '📦' },
-]
-const activeTab = ref('shop')
+// Modal State
+const selectedCosmetic = ref<Cosmetic | null>(null)
+const isModalOpen = ref(false)
 
-// New Items State
-const newCosmetics = ref<Cosmetic[]>([])
-const newLoading = ref(false)
-const newError = ref<string | null>(null)
+// Purchase Confirmation Modal State
+const cosmeticToPurchase = ref<Cosmetic | null>(null)
+const isConfirmationModalOpen = ref(false)
+const isPurchasing = ref(false)
 
-// All Items State
-const allCosmetics = ref<Cosmetic[]>([])
-const allLoading = ref(false)
-const allError = ref<string | null>(null)
-const itemsPerPage = 24
-const currentPage = ref(1)
+// Filters State
+// IMPORTANTE: onlyInShop está sempre true na loja - não pode ser modificado pelo usuário
+const filters = ref<CosmeticFilters>({
+  searchTerm: '',
+  types: [],
+  rarities: [],
+  onlyInShop: true, // FIXO: Loja sempre mostra apenas itens disponíveis no momento
+  excludeBundles: false,
+  sortBy: 'price',
+  sortOrder: 'desc',
+})
 
 // Computed
-const currentDate = computed(() => {
-  const now = new Date()
-  return now.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
-})
+const searchResults = computed(() => cosmeticStore.searchResults)
+const currentPage = computed(() => cosmeticStore.searchPagination.page)
+const totalCount = computed(() => cosmeticStore.searchPagination.totalCount)
+const totalPages = computed(() => cosmeticStore.searchPagination.totalPages)
+const hasPreviousPage = computed(() => cosmeticStore.searchPagination.hasPreviousPage)
+const hasNextPage = computed(() => cosmeticStore.searchPagination.hasNextPage)
 
-// Filter out bundle child items (price = 0) from shop
-const filteredShopCosmetics = computed(() => {
-  return cosmeticStore.cosmetics.filter((c) => c.price > 0)
-})
+const visiblePages = computed(() => {
+  const pages: number[] = []
+  const current = currentPage.value
+  const total = totalPages.value
 
-const filteredNewCosmetics = computed(() => {
-  return newCosmetics.value.filter((c) => c.price > 0)
-})
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    pages.push(1)
+    if (current > 3) pages.push(-1)
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      pages.push(i)
+    }
+    if (current < total - 2) pages.push(-1)
+    pages.push(total)
+  }
 
-const filteredAllCosmetics = computed(() => {
-  return allCosmetics.value.filter((c) => c.price > 0)
-})
-
-const displayedItems = computed(() => {
-  return filteredAllCosmetics.value.slice(0, currentPage.value * itemsPerPage)
-})
-
-const hasMoreItems = computed(() => {
-  return displayedItems.value.length < filteredAllCosmetics.value.length
-})
-
-const remainingItems = computed(() => {
-  return filteredAllCosmetics.value.length - displayedItems.value.length
+  return pages
 })
 
 // Methods
-async function loadShopItems() {
-  await cosmeticStore.fetchShopCosmetics()
+const updateFilters = (newFilters: CosmeticFilters) => {
+  // Garantir que onlyInShop sempre permaneça true na loja
+  filters.value = { ...newFilters, onlyInShop: true }
 }
 
-async function loadNewItems() {
-  newLoading.value = true
-  newError.value = null
+const performSearch = async () => {
+  await cosmeticStore.searchCosmetics(filters.value, 1)
+}
+
+const openDetailModal = (cosmetic: Cosmetic) => {
+  selectedCosmetic.value = cosmetic
+  isModalOpen.value = true
+}
+
+const closeDetailModal = () => {
+  isModalOpen.value = false
+  selectedCosmetic.value = null
+}
+
+const openPurchaseConfirmation = (cosmeticId: string) => {
+  const cosmetic = searchResults.value?.find((c) => c.id === cosmeticId)
+  if (cosmetic) {
+    cosmeticToPurchase.value = cosmetic
+    isConfirmationModalOpen.value = true
+  }
+}
+
+const closePurchaseConfirmation = () => {
+  if (!isPurchasing.value) {
+    isConfirmationModalOpen.value = false
+    cosmeticToPurchase.value = null
+  }
+}
+
+const confirmPurchase = async (cosmeticId: string) => {
+  if (!authStore.isAuthenticated || isPurchasing.value) return
+
+  isPurchasing.value = true
   try {
-    await cosmeticStore.fetchNewCosmetics()
-    newCosmetics.value = cosmeticStore.cosmetics
+    const response = await purchaseStore.purchaseCosmetic(cosmeticId)
+
+    if (response.success) {
+      console.log('Purchase successful:', response.message)
+      // Fecha modais imediatamente ANTES de atualizar
+      isPurchasing.value = false
+      closePurchaseConfirmation()
+      closeDetailModal()
+      // Atualiza a busca em background
+      performSearch()
+    } else {
+      console.error('Purchase failed:', response.message)
+      isPurchasing.value = false
+    }
   } catch (error) {
-    newError.value = 'Erro ao carregar novos itens'
-    console.error('Error loading new items:', error)
-  } finally {
-    newLoading.value = false
+    console.error('Error during purchase:', error)
+    isPurchasing.value = false
   }
 }
 
-async function loadAllItems() {
-  allLoading.value = true
-  allError.value = null
-  currentPage.value = 1
-  try {
-    await cosmeticStore.fetchAllCosmetics()
-    allCosmetics.value = cosmeticStore.cosmetics
-  } catch (error) {
-    allError.value = 'Erro ao carregar todos os itens'
-    console.error('Error loading all items:', error)
-  } finally {
-    allLoading.value = false
-  }
+const isItemOwned = (cosmetic: Cosmetic | null): boolean => {
+  if (!cosmetic) return false
+  return purchaseStore.ownedCosmetics.some((owned) => owned.id === cosmetic.id)
 }
 
-function changeTab(tabId: string) {
-  activeTab.value = tabId
-
-  // Load data for the active tab if not loaded yet
-  if (tabId === 'new' && newCosmetics.value.length === 0 && !newLoading.value) {
-    loadNewItems()
-  } else if (tabId === 'all' && allCosmetics.value.length === 0 && !allLoading.value) {
-    loadAllItems()
-  }
-}
-
-function loadMore() {
-  currentPage.value++
-}
-
-function handlePurchase(cosmeticId: string) {
-  console.log('Cosmetic purchased:', cosmeticId)
-  // Refresh user data
-  if (authStore.isAuthenticated) {
-    purchaseStore.fetchVBucks()
-    purchaseStore.fetchOwnedCosmetics()
-  }
+const goToPage = async (page: number) => {
+  if (page < 1 || page > totalPages.value) return
+  await cosmeticStore.searchCosmetics(filters.value, page)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // Lifecycle
 onMounted(async () => {
-  await loadShopItems()
+  // Busca inicial com filtros de loja
+  await performSearch()
 
   // Load user purchase data if authenticated
   if (authStore.isAuthenticated) {
     await Promise.all([purchaseStore.fetchVBucks(), purchaseStore.fetchOwnedCosmetics()])
   }
-})
-
-onUnmounted(() => {
-  cosmeticStore.cancelRequest()
 })
 </script>
 
@@ -273,11 +273,10 @@ onUnmounted(() => {
 .shop-view {
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  padding: 24px;
 }
 
 .shop-header {
-  margin-bottom: 32px;
+  margin-bottom: 1%;
   text-align: center;
 }
 
@@ -287,13 +286,12 @@ onUnmounted(() => {
 }
 
 .shop-title {
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 900;
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
   margin: 0 0 16px 0;
   animation: shine 3s ease-in-out infinite;
 }
@@ -309,223 +307,265 @@ onUnmounted(() => {
 }
 
 .shop-subtitle {
-  font-size: 1.25rem;
   color: #cbd5e0;
+  font-size: 1.125rem;
   margin: 0;
 }
 
-/* Tabs */
-.tabs-container {
-  max-width: 1400px;
-  margin: 0 auto 32px auto;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
+/* Main Container */
+.shop-main-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.shop-content-wrapper {
+  display: flex;
+  gap: 24px;
+  background: rgba(26, 26, 46, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  height: calc(100vh - 240px);
+  overflow: hidden;
 }
 
-.tabs {
+.sidebar-wrapper {
+  flex-shrink: 0;
+  height: 100%;
   display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
 }
 
-.tab-btn {
-  padding: 14px 28px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #9ca3af;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.items-wrapper {
+  flex: 1;
   display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Content Area */
+.shop-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.shop-stats-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.stats-info {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.tab-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(102, 126, 234, 0.5);
-  color: #cbd5e0;
-}
-
-.tab-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-.tab-emoji {
+.content-title {
   font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
 }
 
-.tab-content {
-  animation: fadeIn 0.5s ease-out;
+.results-count {
+  color: #b4b4b4;
+  font-size: 0.875rem;
+  margin: 0;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.shop-stats-card {
+.page-indicator {
+  padding: 8px 16px;
   background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 32px;
-  display: flex;
-  gap: 48px;
-  justify-content: center;
-  flex-wrap: wrap;
+  border-radius: 8px;
+  color: #b4b4b4;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
-.stat-item {
+/* Grid Container with Scroll */
+.grid-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.grid-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.grid-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.grid-container::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.5);
+  border-radius: 4px;
+}
+
+.grid-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.7);
+}
+
+/* Grid */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding-bottom: 20px;
+}
+
+/* Empty State */
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.shop-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-  animation: fadeInUp 0.6s ease-out;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.empty-state {
+  justify-content: center;
+  min-height: 400px;
   text-align: center;
-  padding: 80px 20px;
-  max-width: 500px;
-  margin: 0 auto;
+  gap: 16px;
 }
 
 .empty-icon {
-  font-size: 5rem;
-  margin-bottom: 24px;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  font-size: 4rem;
+  opacity: 0.5;
 }
 
 .empty-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #f3f4f6;
-  margin: 0 0 12px 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+  margin: 0;
 }
 
 .empty-description {
-  font-size: 1.125rem;
-  color: #9ca3af;
-  margin: 0 0 32px 0;
-  line-height: 1.6;
-}
-
-.load-btn {
-  padding: 14px 32px;
+  color: #b4b4b4;
   font-size: 1rem;
+  margin: 0;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.pagination-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
   font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-.load-btn:hover {
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 
-.load-btn:active {
-  transform: translateY(0);
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
-/* Load More Button */
-.load-more-container {
-  text-align: center;
-  margin-top: 48px;
+.pagination-numbers {
+  display: flex;
+  gap: 8px;
 }
 
-.load-more-btn {
-  padding: 16px 48px;
-  font-size: 1.125rem;
+.pagination-number {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #b4b4b4;
   font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-.load-more-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+.pagination-number:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
-.load-more-btn:active {
-  transform: translateY(0);
+.pagination-number.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: #ffffff;
+}
+
+.pagination-number.ellipsis {
+  cursor: default;
+  background: transparent;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.pagination-number.ellipsis:hover {
+  background: transparent;
+  border-color: transparent;
+  transform: none;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .shop-content-wrapper {
+    flex-direction: column;
+    height: auto;
+    max-height: calc(100vh - 240px);
+  }
+
+  .sidebar-wrapper {
+    height: auto;
+    max-height: 400px;
+  }
+
+  .items-wrapper {
+    flex: 1;
+    min-height: 500px;
+  }
+
+  .shop-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
 }
 
 @media (max-width: 768px) {
+  .shop-view {
+    padding: 60px 0 24px;
+  }
+
+  .shop-main-container {
+    padding: 0 16px;
+  }
+
   .shop-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
   }
 
   .shop-subtitle {
@@ -533,21 +573,11 @@ onUnmounted(() => {
   }
 
   .shop-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 
-  .tab-btn {
-    padding: 12px 20px;
-    font-size: 0.875rem;
-  }
-
-  .shop-stats-card {
-    gap: 24px;
-  }
-
-  .stat-value {
-    font-size: 1.5rem;
+  .pagination-numbers {
+    display: none;
   }
 }
 </style>
