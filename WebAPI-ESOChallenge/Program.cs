@@ -12,6 +12,8 @@ using WebAPI_ESOChallenge.Features.Cosmetics.Interfaces;
 using WebAPI_ESOChallenge.Features.Cosmetics.Services;
 using WebAPI_ESOChallenge.Features.Purchases.Interfaces;
 using WebAPI_ESOChallenge.Features.Purchases.Services;
+using WebAPI_ESOChallenge.Features.News.Interfaces;
+using WebAPI_ESOChallenge.Features.News.Services;
 using WebAPI_ESOChallenge.Services;
 using WebAPI_ESOChallenge.Services.Interfaces;
 
@@ -89,6 +91,7 @@ builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<ICosmeticService, CosmeticService>();
 builder.Services.AddScoped<IHttpClientService, HttpClientService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
+builder.Services.AddScoped<INewsService, NewsService>();
 builder.Services.AddHttpClient();
 
 // Register background services
