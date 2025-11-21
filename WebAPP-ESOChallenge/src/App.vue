@@ -23,18 +23,29 @@ function handleLogout() {
   <div id="app">
     <nav class="main-nav">
       <div class="nav-container">
-        <RouterLink to="/" class="nav-logo"> 🎮 Fortnite API </RouterLink>
+        <RouterLink to="/" class="nav-logo"> 🎮 Fortnite </RouterLink>
 
-        <div class="nav-links">
-          <RouterLink to="/">Home</RouterLink>
+        <div class="nav-center">
+          <RouterLink to="/">🏠 Home</RouterLink>
           <RouterLink to="/cosmetics">📚 Coleção</RouterLink>
           <RouterLink to="/shop">🛒 Loja</RouterLink>
+          <RouterLink to="/users">👥 Usuários</RouterLink>
 
           <!-- Authenticated user links -->
           <template v-if="authStore.isAuthenticated">
             <RouterLink to="/inventory">👜 Inventário</RouterLink>
             <RouterLink to="/purchase-history">📜 Histórico</RouterLink>
+          </template>
 
+          <!-- Guest links -->
+          <template v-else>
+            <RouterLink to="/about">ℹ️ Sobre</RouterLink>
+          </template>
+        </div>
+
+        <div class="nav-right">
+          <!-- Authenticated user actions -->
+          <template v-if="authStore.isAuthenticated">
             <!-- V-Bucks Balance -->
             <div class="vbucks-balance">
               <span class="vbucks-icon">💰</span>
@@ -45,9 +56,8 @@ function handleLogout() {
             <button @click="handleLogout" class="nav-logout">Sair</button>
           </template>
 
-          <!-- Guest links -->
+          <!-- Guest actions -->
           <template v-else>
-            <RouterLink to="/about">Sobre</RouterLink>
             <RouterLink to="/login" class="nav-auth">Entrar</RouterLink>
             <RouterLink to="/register" class="nav-auth nav-auth--primary"> Registrar </RouterLink>
           </template>
@@ -83,6 +93,7 @@ function handleLogout() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
 }
 
 .nav-logo {
@@ -94,18 +105,21 @@ function handleLogout() {
   background-clip: text;
   text-decoration: none;
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .nav-logo:hover {
   transform: scale(1.05);
 }
 
-.nav-links {
+.nav-center {
   display: flex;
   gap: 24px;
+  justify-content: center;
+  flex: 1;
 }
 
-.nav-links a {
+.nav-center a {
   color: #9ca3af;
   text-decoration: none;
   font-weight: 600;
@@ -115,14 +129,21 @@ function handleLogout() {
   transition: all 0.3s ease;
 }
 
-.nav-links a:hover {
+.nav-center a:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.05);
 }
 
-.nav-links a.router-link-active {
+.nav-center a.router-link-active {
   color: #667eea;
   background: rgba(102, 126, 234, 0.1);
+}
+
+.nav-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .nav-user {
@@ -205,14 +226,21 @@ function handleLogout() {
     gap: 16px;
   }
 
-  .nav-links {
+  .nav-center {
     width: 100%;
     justify-content: center;
+    flex-wrap: wrap;
   }
 
-  .nav-links a {
+  .nav-center a {
     font-size: 0.875rem;
     padding: 6px 12px;
+  }
+
+  .nav-right {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 }
 </style>

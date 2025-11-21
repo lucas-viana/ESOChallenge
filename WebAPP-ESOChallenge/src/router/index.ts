@@ -87,6 +87,15 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/users',
+    name: 'users',
+    component: () => import('../views/UsersView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Usuários',
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     redirect: '/',
