@@ -33,32 +33,41 @@ builder.Services.AddSwaggerGen();
 
 // ... (logo após builder.Services.AddSwaggerGen();)
 
-// 1. Pega a string de conexão bruta
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// 2. Lógica de conversão para o Render (postgres:// -> Host=...)
+// 2. Lógica de conversão para o Render (Aceita postgres:// e postgresql://)
 if (!string.IsNullOrEmpty(connectionString) && 
     (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://")))
 {
-    // Parse da URL
-    var databaseUri = new Uri(connectionString);
-    var userInfo = databaseUri.UserInfo.Split(':');
-    
-    // Reconstrói para o formato Key=Value que o Npgsql entende
-    var builderNpgsql = new NpgsqlConnectionStringBuilder
+    try 
     {
-        Host = databaseUri.Host,
-        Port = databaseUri.Port,
-        Username = userInfo[0],
-        Password = userInfo[1],
-        Database = databaseUri.LocalPath.TrimStart('/'),
-        SslMode = SslMode.Prefer // Render exige SSL, mas Prefer é seguro para ambos
-    };
-    
-    connectionString = builderNpgsql.ToString();
+        // Parse da URL
+        var databaseUri = new Uri(connectionString);
+        var userInfo = databaseUri.UserInfo.Split(':');
+        
+        // Reconstrói para o formato Key=Value que o Npgsql entende
+        var builderNpgsql = new NpgsqlConnectionStringBuilder
+        {
+            Host = databaseUri.Host,
+            Port = databaseUri.Port > 0 ? databaseUri.Port : 5432,
+            Username = userInfo[0],
+            Password = userInfo[1],
+            Database = databaseUri.LocalPath.TrimStart('/'),
+            SslMode = SslMode.Prefer,
+            Pooling = true
+        };
+        
+        connectionString = builderNpgsql.ToString();
+    }
+    catch (Exception ex)
+    {
+        // Loga o erro para ajudar no debug se a string estiver mal formatada
+        Console.WriteLine($"Erro ao processar connection string: {ex.Message}");
+        throw;
+    }
 }
 
-// 3. Configura o DbContext com a string tratada
+// 3. Configura o DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
