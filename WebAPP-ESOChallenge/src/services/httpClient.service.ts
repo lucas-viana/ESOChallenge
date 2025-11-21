@@ -65,7 +65,7 @@ export class HttpClientService {
   /**
    * POST Request genérico com autenticação automática
    */
-  async post<T, B = unknown>(endpoint: string, body: B): Promise<T> {
+  async post<T, B = unknown>(endpoint: string, body: B, signal?: AbortSignal): Promise<T> {
     try {
       const config = addAuthToken({
         method: 'POST',
@@ -73,6 +73,7 @@ export class HttpClientService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal,
       })
 
       const response = await fetch(this.buildURL(endpoint), config)
