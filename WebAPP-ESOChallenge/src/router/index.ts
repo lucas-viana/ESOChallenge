@@ -18,8 +18,8 @@ const routes: RouteRecordRaw[] = [
     component: HomeView,
     meta: {
       requiresAuth: false,
-      title: 'Home'
-    }
+      title: 'Home',
+    },
   },
   {
     path: '/login',
@@ -28,8 +28,8 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Login',
-      hideForAuth: true // Esconder para usuários já autenticados
-    }
+      hideForAuth: true, // Esconder para usuários já autenticados
+    },
   },
   {
     path: '/register',
@@ -38,17 +38,17 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Criar Conta',
-      hideForAuth: true
-    }
+      hideForAuth: true,
+    },
   },
   {
     path: '/cosmetics',
     name: 'cosmetics',
     component: () => import('../views/CosmeticsView.vue'),
     meta: {
-      requiresAuth: false, // Temporariamente false para MVP
-      title: 'Cosméticos'
-    }
+      requiresAuth: false,
+      title: 'Coleção',
+    },
   },
   {
     path: '/shop',
@@ -56,17 +56,17 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/ShopView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'Loja'
-    }
+      title: 'Loja',
+    },
   },
   {
-    path: '/my-items',
-    name: 'my-items',
+    path: '/inventory',
+    name: 'inventory',
     component: () => import('../views/MyItemsView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Meus Itens'
-    }
+      title: 'Inventário',
+    },
   },
   {
     path: '/purchase-history',
@@ -74,8 +74,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/PurchaseHistoryView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Histórico de Compras'
-    }
+      title: 'Histórico de Compras',
+    },
   },
   {
     path: '/about',
@@ -83,19 +83,19 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/AboutView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'Sobre'
-    }
+      title: 'Sobre',
+    },
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
-    redirect: '/'
-  }
+    redirect: '/',
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
 })
 
 /**
