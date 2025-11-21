@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Microsoft.Extensions.Configuration;
 using WebAPI_ESOChallenge.Features.News.DTOs;
 using WebAPI_ESOChallenge.Features.News.Interfaces;
 using WebAPI_ESOChallenge.Services.Interfaces;
@@ -12,13 +13,16 @@ public class NewsService : INewsService
 {
     private readonly IHttpClientService _httpClientService;
     private readonly ILogger<NewsService> _logger;
+    private readonly string _baseUrl;
 
     public NewsService(
         IHttpClientService httpClientService,
-        ILogger<NewsService> logger)
+        ILogger<NewsService> logger,
+        IConfiguration configuration)
     {
         _httpClientService = httpClientService;
         _logger = logger;
+        _baseUrl = configuration["FortniteApi:BaseUrl"] ?? "https://fortnite-api.com/v2";
     }
 
     /// <summary>
@@ -30,7 +34,7 @@ public class NewsService : INewsService
         {
             _logger.LogInformation("Fetching Fortnite news from API");
 
-            var response = await _httpClientService.GetAsync<NewsApiResponse>("news");
+            var response = await _httpClientService.GetAsync<NewsApiResponse>($"{_baseUrl}/news");
 
             if (response == null)
             {

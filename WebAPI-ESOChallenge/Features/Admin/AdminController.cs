@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebAPI_ESOChallenge.Data;
+using WebAPI_ESOChallenge.Features.Admin.Dtos;
+using WebAPI_ESOChallenge.Features.Authentication.Models;
 using WebAPI_ESOChallenge.Features.Cosmetics.Interfaces;
 
 namespace WebAPI_ESOChallenge.Features.Admin
@@ -12,15 +15,18 @@ namespace WebAPI_ESOChallenge.Features.Admin
     {
         private readonly ICosmeticService _cosmeticService;
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<AdminController> _logger;
 
         public AdminController(
             ICosmeticService cosmeticService,
             ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
             ILogger<AdminController> logger)
         {
             _cosmeticService = cosmeticService;
             _context = context;
+            _userManager = userManager;
             _logger = logger;
         }
 
@@ -155,6 +161,100 @@ namespace WebAPI_ESOChallenge.Features.Admin
                 {
                     success = false,
                     message = "Erro ao sincronizar todos os cosméticos",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Lista todos os usuários cadastrados (público)
+        /// </summary>
+        [HttpGet("users")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            try
+            {
+                var users = await _userManager.Users
+                    .Select(u => new UserProfileDto
+                    {
+                        Id = u.Id,
+                        Email = u.Email ?? string.Empty,
+                        FirstName = u.FirstName,
+                        LastName = u.LastName,
+                        VBucks = u.VBucks,
+                        TotalCosmetics = u.PurchasedCosmetics.Count(uc => !uc.IsRefunded) // Apenas itens no inventário
+                    })
+                    .OrderByDescending(u => u.TotalCosmetics)
+                    .ToListAsync();
+
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao buscar usuários");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Erro ao buscar usuários",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Obtém detalhes do perfil de um usuário específico (público)
+        /// </summary>
+        [HttpGet("users/{userId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUserProfile(string userId)
+        {
+            try
+            {
+                var user = await _userManager.Users
+                    .Include(u => u.PurchasedCosmetics)
+                    .ThenInclude(uc => uc.Cosmetic)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                {
+                    return NotFound(new { message = "Usuário não encontrado" });
+                }
+
+                var userProfile = new UserProfileDetailsDto
+                {
+                    Id = user.Id,
+                    Email = user.Email ?? string.Empty,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    VBucks = user.VBucks,
+                    Cosmetics = user.PurchasedCosmetics
+                        .Where(uc => !uc.IsRefunded) // Apenas itens não devolvidos (inventário)
+                        .Select(uc =>  new UserCosmeticDto
+                        {
+                            CosmeticId = uc.CosmeticId,
+                            Name = uc.Cosmetic?.Name ?? "Unknown",
+                            Description = uc.Cosmetic?.Description,
+                            Type = uc.Cosmetic?.Type?.DisplayValue ?? "Unknown",
+                            Rarity = uc.Cosmetic?.Rarity?.DisplayValue ?? "Unknown",
+                            ImageUrl = uc.Cosmetic?.Images?.Icon,
+                            Price = uc.PurchasePrice,
+                            PurchasedAt = uc.PurchasedAt,
+                            BundleId = uc.BundleId // Preenche o identificador do bundle se existir
+                        })
+                        .OrderByDescending(c => c.PurchasedAt)
+                        .ToList()
+                };
+
+                return Ok(userProfile);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao buscar perfil do usuário {UserId}", userId);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Erro ao buscar perfil do usuário",
                     error = ex.Message
                 });
             }
