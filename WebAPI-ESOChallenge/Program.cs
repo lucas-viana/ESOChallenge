@@ -166,5 +166,21 @@ app.UseAuthorization();
 // Map controllers
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        Thread.Sleep(5000);
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        await context.Database.MigrateAsync();
+        Console.WriteLine("Banco de dados migrado com sucesso!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Erro ao migrar banco: {ex.Message}");
+    }
+}
+
 // Run the application
 await app.RunAsync();
