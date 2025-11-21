@@ -1,4 +1,4 @@
-import api from './api'
+import { httpClient } from './httpClient.service'
 import type { NewsApiResponse } from '@/types/news'
 
 /**
@@ -9,8 +9,7 @@ class NewsService {
    * Gets the latest Fortnite news for all game modes (BR, STW, Creative)
    */
   async getNews(): Promise<NewsApiResponse> {
-    const response = await api.get<NewsApiResponse>('/news')
-    return response.data
+    return await httpClient.get<NewsApiResponse>('/api/news')
   }
 }
 
