@@ -14,6 +14,11 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # --- 2. Serviço do Backend (.NET API) ---
   backend-api:
@@ -29,7 +34,8 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   # --- 3. Serviço do Frontend (Vue.js) ---
   frontend-web:
@@ -37,6 +43,8 @@ services:
     build:
       context: ./WebAPP-ESOChallenge
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8081
     restart: always
     ports:
       - "8080:80"

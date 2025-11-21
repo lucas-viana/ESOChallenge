@@ -46,36 +46,80 @@ Banco de Dados
 PostgreSQL: Escolhido pela sua robustez, conformidade ACID e excelente suporte no ecossistema .NET com Npgsql.
 
 🐳 Como Rodar com Docker (Para Avaliadores)
-O projeto está totalmente configurado com Docker Compose, permitindo que você suba todo o ambiente (Banco, API e Frontend) com um único comando, sem a necessidade de instalar SDKs do .NET ou Node.js localmente.
+O projeto está totalmente configurado com Docker Compose, permitindo que você suba todo o ambiente (Banco de Dados, Backend API e Frontend) com um único comando, sem a necessidade de instalar SDKs do .NET ou Node.js localmente.
 
-Pré-requisitos
-Docker instalado e rodando.
+## Pré-requisitos
+- **Docker Desktop** instalado e rodando ([Download aqui](https://www.docker.com/products/docker-desktop))
+- **Git** instalado ([Download aqui](https://git-scm.com/))
 
-Git instalado.
+## Passo a Passo Completo
 
-Passo a Passo
-Clone o repositório:
+### 1️⃣ Clone o Repositório
+Abra o terminal (PowerShell, CMD ou Git Bash) e execute:
 
-Bash
-
+```bash
 git clone https://github.com/lucas-viana/ESOChallenge.git
 cd ESOChallenge
-Suba os containers: Execute o comando abaixo na raiz do projeto (onde está o arquivo docker-compose.yml). O parâmetro --build garante que as imagens sejam construídas com as alterações mais recentes.
+```
 
-Bash
+### 2️⃣ Inicie os Containers
+Na raiz do projeto (onde está o arquivo `docker-compose.yml`), execute:
 
+```bash
 docker-compose up --build
-Aguarde a inicialização:
+```
 
-O container eso-backend-api irá aguardar o banco de dados ficar pronto.
+> **O que acontece neste comando?**
+> - `docker-compose up`: Inicia todos os serviços definidos no docker-compose.yml
+> - `--build`: Reconstrói as imagens Docker para garantir que as alterações mais recentes sejam aplicadas
 
-Nota Importante: Ao iniciar, a API executará automaticamente as Migrações do Banco de Dados e iniciará a Sincronização de Dados com a API do Fortnite. Isso pode levar alguns segundos. Fique atento aos logs: ✅ Banco de dados migrado com sucesso!.
+### 3️⃣ Acompanhe a Inicialização
+Você verá os logs dos 3 containers sendo iniciados:
 
-Acesse a aplicação:
+1. **PostgreSQL** (`eso-postgres-db`): Banco de dados iniciando na porta 5433
+2. **Backend API** (`eso-backend-api`): Aguardando o banco ficar pronto → Aplicando migrações → Sincronizando dados do Fortnite
+3. **Frontend** (`eso-frontend-web`): Build do Vue.js → Servidor Nginx rodando
 
-Frontend (Aplicação Web): http://localhost:8080
+**Aguarde até ver estas mensagens importantes:**
+- ✅ `Banco de dados migrado com sucesso!`
+- 🔄 `Iniciando sincronização completa do Fortnite...`
+- ✅ `Sincronização completa finalizada com sucesso!`
 
-Backend (Swagger UI): http://localhost:8081/swagger
+> ⏱️ **Tempo estimado**: 2-5 minutos na primeira execução (dependendo da conexão para baixar imagens Docker e sincronizar dados)
+
+### 4️⃣ Acesse a Aplicação
+Quando os logs mostrarem que tudo está pronto, acesse:
+
+| Serviço | URL | Descrição |
+|---------|-----|-----------|
+| **Frontend (Aplicação Web)** | http://localhost:8080 | Interface principal da loja |
+| **Backend (Swagger UI)** | http://localhost:8081/swagger | Documentação interativa da API |
+| **Banco de Dados** | `localhost:5433` | PostgreSQL (use um cliente como DBeaver ou pgAdmin) |
+
+### 5️⃣ Credenciais de Teste
+O sistema inicia sem usuários pré-cadastrados. Para testar:
+
+1. Acesse http://localhost:8080
+2. Clique em **"Registrar"**
+3. Crie uma conta (qualquer email/senha)
+4. Você receberá automaticamente **10.000 V-Bucks** para testar as compras!
+
+### 6️⃣ Para Parar os Containers
+Pressione `Ctrl + C` no terminal onde o docker-compose está rodando, ou execute:
+
+```bash
+docker-compose down
+```
+
+### 7️⃣ Para Recomeçar do Zero (Resetar Banco de Dados)
+Se quiser apagar todos os dados e começar novamente:
+
+```bash
+docker-compose down -v
+docker-compose up --build
+```
+
+> **Atenção**: O parâmetro `-v` remove os volumes (incluindo dados do banco de dados)
 
 Credenciais de Teste (Opcional)
 Você pode registrar um novo usuário livremente na aplicação, mas caso queira testar rapidamente:
