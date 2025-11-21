@@ -52,7 +52,7 @@ public class CosmeticService : ICosmeticService
             var url = $"{_baseUrl}/cosmetics";
             _logger.LogInformation("Buscando todos os cosméticos do Fortnite (todas as categorias)");
             
-            var response = await _httpClientService.GetAsync<FortniteApiResponse<Dictionary<string, List<CosmeticDto>>>>(url);
+            var response = await _httpClientService.GetAsync<FortniteApiResponse<AllCosmeticsData>>(url);
 
             if (response?.Data == null)
             {
@@ -60,19 +60,65 @@ public class CosmeticService : ICosmeticService
                 return Enumerable.Empty<CosmeticResponseDto>();
             }
 
-            // Combinar TODAS as categorias: br, tracks, instruments, cars, lego, beans, etc.
             var allCosmetics = new List<Cosmetic>();
+            var data = response.Data;
             
-            foreach (var category in response.Data)
+            // Categoria BR (Battle Royale)
+            if (data.Br != null)
             {
-                if (category.Value == null) continue;
-                
-                var categoryCosmetics = category.Value
+                var brCosmetics = data.Br
                     .Where(dto => dto.Type != null && dto.Rarity != null)
                     .Select(MapToCosmetic);
-                    
-                allCosmetics.AddRange(categoryCosmetics);
-                _logger.LogDebug("Categoria '{Category}': {Count} cosméticos", category.Key, category.Value.Count);
+                allCosmetics.AddRange(brCosmetics);
+                _logger.LogDebug("Categoria 'br': {Count} cosméticos", data.Br.Count);
+            }
+            
+            // Categoria Tracks (Músicas)
+            if (data.Tracks != null)
+            {
+                var tracks = data.Tracks.Select(MapTrackToCosmetic);
+                allCosmetics.AddRange(tracks);
+                _logger.LogDebug("Categoria 'tracks': {Count} cosméticos", data.Tracks.Count);
+            }
+            
+            // Categoria Instruments (Instrumentos)
+            if (data.Instruments != null)
+            {
+                var instruments = data.Instruments.Select(MapInstrumentToCosmetic);
+                allCosmetics.AddRange(instruments);
+                _logger.LogDebug("Categoria 'instruments': {Count} cosméticos", data.Instruments.Count);
+            }
+            
+            // Categoria Cars (Veículos)
+            if (data.Cars != null)
+            {
+                var cars = data.Cars.Select(MapCarToCosmetic);
+                allCosmetics.AddRange(cars);
+                _logger.LogDebug("Categoria 'cars': {Count} cosméticos", data.Cars.Count);
+            }
+            
+            // Categoria Lego
+            if (data.Lego != null)
+            {
+                var legos = data.Lego.Select(MapLegoToCosmetic);
+                allCosmetics.AddRange(legos);
+                _logger.LogDebug("Categoria 'lego': {Count} cosméticos", data.Lego.Count);
+            }
+            
+            // Categoria LegoKits
+            if (data.LegoKits != null)
+            {
+                var legoKits = data.LegoKits.Select(MapLegoKitToCosmetic);
+                allCosmetics.AddRange(legoKits);
+                _logger.LogDebug("Categoria 'legoKits': {Count} cosméticos", data.LegoKits.Count);
+            }
+            
+            // Categoria Beans (Fall Guys)
+            if (data.Beans != null)
+            {
+                var beans = data.Beans.Select(MapBeanToCosmetic);
+                allCosmetics.AddRange(beans);
+                _logger.LogDebug("Categoria 'beans': {Count} cosméticos", data.Beans.Count);
             }
 
             _logger.LogInformation("{Count} cosméticos encontrados em todas as categorias", allCosmetics.Count);
@@ -94,7 +140,7 @@ public class CosmeticService : ICosmeticService
     }
 
     /// <summary>
-    /// Busca os cosméticos novos/recentes
+    /// Busca os cosméticos novos/recentes de TODAS as categorias
     /// Atende requisito: /cosmetics/new - Listagem de todos os cosméticos que são novos
     /// Retorna DTOs prontos para serem consumidos pela API
     /// </summary>
@@ -103,25 +149,81 @@ public class CosmeticService : ICosmeticService
         var url = $"{_baseUrl}/cosmetics/new";
         try
         {
-            _logger.LogInformation("Buscando cosméticos novos da API do Fortnite");
-            var response = await _httpClientService.GetAsync<FortniteApiResponse<CosmeticsListResponse>>(url);
+            _logger.LogInformation("Buscando cosméticos novos da API do Fortnite (todas as categorias)");
+            var response = await _httpClientService.GetAsync<FortniteApiResponse<NewCosmeticsData>>(url);
 
-            if (response?.Data?.Items?.Br == null || !response.Data.Items.Br.Any())
+            if (response?.Data?.Items == null)
             {
                 _logger.LogWarning("Nenhum cosmético novo encontrado");
                 return Enumerable.Empty<CosmeticResponseDto>();
             }
 
-            var cosmetics = response.Data.Items.Br
-                .Where(dto => dto.Type != null && dto.Rarity != null)
-                .Select(MapToCosmetic)
-                .ToList();
+            var allNewCosmetics = new List<Cosmetic>();
+            var items = response.Data.Items;
             
-            _logger.LogInformation("{Count} cosméticos novos encontrados", cosmetics.Count);
+            // Categoria BR (Battle Royale)
+            if (items.Br != null && items.Br.Any())
+            {
+                var brCosmetics = items.Br
+                    .Where(dto => dto.Type != null && dto.Rarity != null)
+                    .Select(MapToCosmetic);
+                allNewCosmetics.AddRange(brCosmetics);
+                _logger.LogDebug("Novos na categoria 'br': {Count} cosméticos", items.Br.Count);
+            }
+            
+            // Categoria Tracks (Músicas)
+            if (items.Tracks != null && items.Tracks.Any())
+            {
+                var tracks = items.Tracks.Select(MapTrackToCosmetic);
+                allNewCosmetics.AddRange(tracks);
+                _logger.LogDebug("Novos na categoria 'tracks': {Count} cosméticos", items.Tracks.Count);
+            }
+            
+            // Categoria Instruments (Instrumentos)
+            if (items.Instruments != null && items.Instruments.Any())
+            {
+                var instruments = items.Instruments.Select(MapInstrumentToCosmetic);
+                allNewCosmetics.AddRange(instruments);
+                _logger.LogDebug("Novos na categoria 'instruments': {Count} cosméticos", items.Instruments.Count);
+            }
+            
+            // Categoria Cars (Veículos)
+            if (items.Cars != null && items.Cars.Any())
+            {
+                var cars = items.Cars.Select(MapCarToCosmetic);
+                allNewCosmetics.AddRange(cars);
+                _logger.LogDebug("Novos na categoria 'cars': {Count} cosméticos", items.Cars.Count);
+            }
+            
+            // Categoria Lego
+            if (items.Lego != null && items.Lego.Any())
+            {
+                var legos = items.Lego.Select(MapLegoToCosmetic);
+                allNewCosmetics.AddRange(legos);
+                _logger.LogDebug("Novos na categoria 'lego': {Count} cosméticos", items.Lego.Count);
+            }
+            
+            // Categoria LegoKits
+            if (items.LegoKits != null && items.LegoKits.Any())
+            {
+                var legoKits = items.LegoKits.Select(MapLegoKitToCosmetic);
+                allNewCosmetics.AddRange(legoKits);
+                _logger.LogDebug("Novos na categoria 'legoKits': {Count} cosméticos", items.LegoKits.Count);
+            }
+            
+            // Categoria Beans (Fall Guys)
+            if (items.Beans != null && items.Beans.Any())
+            {
+                var beans = items.Beans.Select(MapBeanToCosmetic);
+                allNewCosmetics.AddRange(beans);
+                _logger.LogDebug("Novos na categoria 'beans': {Count} cosméticos", items.Beans.Count);
+            }
+            
+            _logger.LogInformation("{Count} cosméticos novos encontrados em todas as categorias", allNewCosmetics.Count);
             
             // Mapear para DTOs de resposta
             var responseDtos = new List<CosmeticResponseDto>();
-            foreach (var cosmetic in cosmetics)
+            foreach (var cosmetic in allNewCosmetics)
             {
                 responseDtos.Add(await MapToResponseDtoAsync(cosmetic));
             }
@@ -147,28 +249,7 @@ public class CosmeticService : ICosmeticService
         {
             _logger.LogInformation("Buscando cosméticos da loja do Fortnite");
             
-            var shopUrl = $"{_baseUrl}/shop";
-            var shopResponse = await _httpClientService.GetAsync<FortniteApiResponse<ShopData>>(shopUrl);
-
-            if (shopResponse?.Data?.Entries == null)
-            {
-                _logger.LogWarning("Nenhum dado da loja encontrado na API");
-                return Enumerable.Empty<CosmeticResponseDto>();
-            }
-
-            _logger.LogDebug("Total de entries na loja: {Count}", shopResponse.Data.Entries.Count);
-
-            // Buscar todos os cosméticos para ter referência completa (necessário para resolver bundles)
-            // Nota: Chama método interno que retorna entidades, não DTOs
-            var allCosmeticsResponse = await GetAllCosmeticsInternalAsync();
-            var allCosmetics = allCosmeticsResponse.ToDictionary(c => c.Id);
-
-            var shopCosmetics = new Dictionary<string, Cosmetic>();
-
-            foreach (var entry in shopResponse.Data.Entries)
-            {
-                ProcessShopEntry(entry, shopCosmetics, allCosmetics);
-            }
+            var shopCosmetics = await GetShopCosmeticsInternalAsync();
 
             _logger.LogInformation("{Count} cosméticos únicos encontrados na loja (incluindo bundles)", shopCosmetics.Count);
             
@@ -197,29 +278,87 @@ public class CosmeticService : ICosmeticService
     {
         try
         {
-            var shopUrl = $"{_baseUrl}/shop";
-            var shopResponse = await _httpClientService.GetAsync<FortniteApiResponse<ShopData>>(shopUrl);
-
-            if (shopResponse?.Data?.Entries == null)
-            {
-                return Enumerable.Empty<Cosmetic>();
-            }
-
-            var allCosmeticsResponse = await GetAllCosmeticsInternalAsync();
-            var allCosmetics = allCosmeticsResponse.ToDictionary(c => c.Id);
-
-            var shopCosmetics = new Dictionary<string, Cosmetic>();
-
-            foreach (var entry in shopResponse.Data.Entries)
-            {
-                ProcessShopEntry(entry, shopCosmetics, allCosmetics);
-            }
-
+            var shopCosmetics = await GetShopCosmeticsInternalAsync();
             return shopCosmetics.Values;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro ao buscar cosméticos da loja para persistência");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Busca cosméticos novos retornando entidades de domínio para persistência
+    /// Uso: Sincronização de novos itens no banco de dados
+    /// </summary>
+    public async Task<IEnumerable<Cosmetic>> GetNewCosmeticsForPersistenceAsync()
+    {
+        var url = $"{_baseUrl}/cosmetics/new";
+        try
+        {
+            _logger.LogInformation("Buscando cosméticos novos para persistência");
+            var response = await _httpClientService.GetAsync<FortniteApiResponse<NewCosmeticsData>>(url);
+
+            if (response?.Data?.Items == null)
+            {
+                _logger.LogWarning("Nenhum cosmético novo encontrado para persistência");
+                return Enumerable.Empty<Cosmetic>();
+            }
+
+            var allNewCosmetics = new List<Cosmetic>();
+            var items = response.Data.Items;
+            
+            // Processar todas as categorias
+            if (items.Br != null && items.Br.Any())
+            {
+                allNewCosmetics.AddRange(items.Br
+                    .Where(dto => dto.Type != null && dto.Rarity != null)
+                    .Select(MapToCosmetic));
+            }
+            
+            if (items.Tracks != null && items.Tracks.Any())
+            {
+                allNewCosmetics.AddRange(items.Tracks.Select(MapTrackToCosmetic));
+            }
+            
+            if (items.Instruments != null && items.Instruments.Any())
+            {
+                allNewCosmetics.AddRange(items.Instruments.Select(MapInstrumentToCosmetic));
+            }
+            
+            if (items.Cars != null && items.Cars.Any())
+            {
+                allNewCosmetics.AddRange(items.Cars.Select(MapCarToCosmetic));
+            }
+            
+            if (items.Lego != null && items.Lego.Any())
+            {
+                allNewCosmetics.AddRange(items.Lego.Select(MapLegoToCosmetic));
+            }
+            
+            if (items.LegoKits != null && items.LegoKits.Any())
+            {
+                allNewCosmetics.AddRange(items.LegoKits.Select(MapLegoKitToCosmetic));
+            }
+            
+            if (items.Beans != null && items.Beans.Any())
+            {
+                allNewCosmetics.AddRange(items.Beans.Select(MapBeanToCosmetic));
+            }
+
+            // Marcar todos os itens como novos
+            foreach (var cosmetic in allNewCosmetics)
+            {
+                cosmetic.IsNew = true;
+            }
+
+            _logger.LogInformation("{Count} cosméticos novos prontos para persistência", allNewCosmetics.Count);
+            return allNewCosmetics;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao buscar cosméticos novos para persistência");
             throw;
         }
     }
@@ -256,251 +395,214 @@ public class CosmeticService : ICosmeticService
     #region Private Methods - Single Responsibility Principle
 
     /// <summary>
-    /// Processa uma entry da loja, identificando se é bundle ou item individual
-    /// Aplica Single Responsibility Principle
+    /// Lógica central para buscar e processar cosméticos da loja.
+    /// Unifica a busca para evitar duplicação de código entre os métodos públicos.
+    /// IMPORTANTE: Antes de processar a nova loja, reseta IsInShop de TODOS os itens no banco
+    /// para garantir que apenas itens atualmente na loja estejam disponíveis para compra.
     /// </summary>
-    private void ProcessShopEntry(
-        ShopEntry entry, 
-        Dictionary<string, Cosmetic> shopCosmetics, 
-        Dictionary<string, Cosmetic> allCosmetics)
+    private async Task<Dictionary<string, Cosmetic>> GetShopCosmeticsInternalAsync()
     {
-        // CASO 1: Bundle com lista de itens explícita (brItems)
-        if (IsExplicitBundle(entry))
+        var shopUrl = $"{_baseUrl}/shop";
+        var shopResponse = await _httpClientService.GetAsync<FortniteApiResponse<ShopData>>(shopUrl);
+
+        if (shopResponse?.Data?.Entries == null || !shopResponse.Data.Entries.Any())
         {
-            ProcessExplicitBundle(entry, shopCosmetics);
-            return;
+            _logger.LogWarning("Nenhum dado da loja encontrado na API");
+            return new Dictionary<string, Cosmetic>();
         }
 
-        // CASO 2: Bundle sem lista de itens (usa NewDisplayAsset para identificar)
-        if (IsImplicitBundle(entry))
+        _logger.LogDebug("Total de entries na loja: {Count}", shopResponse.Data.Entries.Count);
+        
+        // IMPORTANTE: Resetar IsInShop de todos os cosméticos no banco antes de processar a nova loja
+        // Isso garante que apenas itens retornados pela API atual estarão disponíveis
+        await ResetShopAvailabilityAsync();
+        
+        var shopCosmetics = new Dictionary<string, Cosmetic>();
+
+        foreach (var entry in shopResponse.Data.Entries)
         {
-            ProcessImplicitBundle(entry, shopCosmetics, allCosmetics);
-            return;
+            ProcessShopEntry(entry, shopCosmetics);
         }
 
-        // CASO 3: Itens individuais normais
-        if (entry.BrItems != null)
+        return shopCosmetics;
+    }
+
+    /// <summary>
+    /// Reseta a flag IsInShop de todos os cosméticos no banco de dados.
+    /// Chamado antes de processar a nova loja para garantir que apenas itens atuais estejam disponíveis.
+    /// </summary>
+    private async Task ResetShopAvailabilityAsync()
+    {
+        try
         {
-            ProcessIndividualItems(entry, shopCosmetics);
+            var itemsToUpdate = await _context.Cosmetics
+                .Where(c => c.IsInShop)
+                .ToListAsync();
+
+            if (itemsToUpdate.Any())
+            {
+                _logger.LogInformation("Resetando IsInShop de {Count} itens antes de processar nova loja", itemsToUpdate.Count);
+                
+                foreach (var item in itemsToUpdate)
+                {
+                    item.IsInShop = false;
+                }
+
+                await _context.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Erro ao resetar disponibilidade da loja. Continuando com processamento...");
+            // Não lançar exceção - permite continuar o processamento mesmo se o reset falhar
         }
     }
 
     /// <summary>
-    /// Verifica se é um bundle com lista explícita de itens
-    /// Clean Code: nome descritivo que expressa intenção
+    /// Processa uma entry da loja, identificando se é bundle ou item individual.
+    /// Nova lógica simplificada baseada na estrutura real da API.
     /// </summary>
-    private static bool IsExplicitBundle(ShopEntry entry) =>
-        entry.Bundle != null && 
-        entry.BrItems != null && 
-        entry.BrItems.Count > 1;
-
-    /// <summary>
-    /// Verifica se é um bundle sem lista de itens (identificado por NewDisplayAsset)
-    /// Clean Code: nome descritivo que expressa intenção
-    /// </summary>
-    private static bool IsImplicitBundle(ShopEntry entry) =>
-        entry.Bundle != null && 
-        (entry.BrItems == null || entry.BrItems.Count == 0) && 
-        entry.NewDisplayAsset?.CosmeticId != null;
-
-    /// <summary>
-    /// Processa bundle com lista explícita de itens
-    /// Exemplo: Bundle que contém multiple BrItems, Tracks e Cars
-    /// </summary>
-    private void ProcessExplicitBundle(ShopEntry entry, Dictionary<string, Cosmetic> shopCosmetics)
+    private void ProcessShopEntry(ShopEntry entry, Dictionary<string, Cosmetic> shopCosmetics)
     {
-        var bundleDto = entry.BrItems!.First();
-        var bundleId = $"BUNDLE_{bundleDto.Id}";
+        var containedItems = new List<Cosmetic>();
 
-        if (shopCosmetics.ContainsKey(bundleId)) return;
-
-        // Primeiro, adicionar os itens individuais do bundle ao banco
+        // 1. Coletar todos os itens de todas as categorias dentro da entry
         if (entry.BrItems != null)
         {
             foreach (var dto in entry.BrItems.Where(dto => dto.Type != null && dto.Rarity != null))
             {
-                if (!shopCosmetics.ContainsKey(dto.Id))
-                {
-                    var cosmetic = MapToCosmetic(dto);
-                    cosmetic.IsAvailable = true;
-                    cosmetic.Price = 0; // Itens de bundle não têm preço individual na loja
-                    shopCosmetics.Add(dto.Id, cosmetic);
-                }
+                containedItems.Add(MapToCosmetic(dto));
             }
         }
-
-        // Adicionar Tracks (músicas) ao banco
+        
         if (entry.Tracks != null)
         {
             foreach (var track in entry.Tracks)
             {
-                if (!shopCosmetics.ContainsKey(track.Id))
-                {
-                    var cosmetic = MapTrackToCosmetic(track);
-                    cosmetic.IsAvailable = true;
-                    cosmetic.Price = 0;
-                    shopCosmetics.Add(track.Id, cosmetic);
-                }
+                containedItems.Add(MapTrackToCosmetic(track));
             }
         }
-
-        // Adicionar Cars (veículos) ao banco
+        
         if (entry.Cars != null)
         {
             foreach (var car in entry.Cars)
             {
-                if (!shopCosmetics.ContainsKey(car.Id))
-                {
-                    var cosmetic = MapCarToCosmetic(car);
-                    cosmetic.IsAvailable = true;
-                    cosmetic.Price = 0;
-                    shopCosmetics.Add(car.Id, cosmetic);
-                }
+                containedItems.Add(MapCarToCosmetic(car));
+            }
+        }
+        
+        if (entry.Instruments != null)
+        {
+            foreach (var instrument in entry.Instruments)
+            {
+                containedItems.Add(MapInstrumentToCosmetic(instrument));
+            }
+        }
+        
+        if (entry.LegoKits != null)
+        {
+            foreach (var legoKit in entry.LegoKits)
+            {
+                containedItems.Add(MapLegoKitToCosmetic(legoKit));
             }
         }
 
-        // Coletar IDs de todos os tipos de itens do bundle
-        var containedItemIds = new List<string>();
+        // Filtrar itens inválidos que podem vir da API
+        containedItems = containedItems.Where(c => c.Type != null && c.Rarity != null).ToList();
         
-        // Itens BR (skins, pickaxes, etc)
-        if (entry.BrItems != null)
+        if (!containedItems.Any())
         {
-            containedItemIds.AddRange(entry.BrItems.Select(i => i.Id));
-        }
-        
-        // Tracks (músicas)
-        if (entry.Tracks != null)
-        {
-            containedItemIds.AddRange(entry.Tracks.Select(t => t.Id));
-        }
-        
-        // Cars (veículos)
-        if (entry.Cars != null)
-        {
-            containedItemIds.AddRange(entry.Cars.Select(c => c.Id));
-        }
-
-        var bundle = CreateBundleCosmetic(
-            bundleId,
-            entry.Bundle!.Name,
-            entry.Bundle.Info,
-            entry.FinalPrice,
-            entry.Bundle.Image ?? bundleDto.Images?.Featured,
-            bundleDto.Images?.Icon,
-            containedItemIds,
-            entry.Bundle.Image
-        );
-
-        shopCosmetics.Add(bundleId, bundle);
-        _logger.LogDebug("Bundle explícito processado: {BundleId} com {Count} itens (BrItems: {BrCount}, Tracks: {TrackCount}, Cars: {CarCount})", 
-            bundleId, bundle.ContainedItemIds.Count, 
-            entry.BrItems?.Count ?? 0, 
-            entry.Tracks?.Count ?? 0, 
-            entry.Cars?.Count ?? 0);
-    }
-
-    /// <summary>
-    /// Processa bundle sem lista explícita (extrai do devName)
-    /// Exemplo: Bundle CHROMAKOPIAN que não tem BrItems mas tem devName descritivo
-    /// </summary>
-    private void ProcessImplicitBundle(
-        ShopEntry entry, 
-        Dictionary<string, Cosmetic> shopCosmetics,
-        Dictionary<string, Cosmetic> allCosmetics)
-    {
-        var mainCosmeticId = entry.NewDisplayAsset!.CosmeticId!;
-        var bundleId = $"BUNDLE_{mainCosmeticId}";
-
-        if (shopCosmetics.ContainsKey(bundleId)) return;
-
-        // Extrair IDs dos itens do devName (formato: "1 x Item1, 1 x Item2")
-        var containedIds = ExtractItemIdsFromDevName(entry.DevName, allCosmetics);
-        
-        // Se não conseguiu extrair do devName, usar apenas o item principal
-        if (containedIds.Count == 0 && allCosmetics.ContainsKey(mainCosmeticId))
-        {
-            containedIds.Add(mainCosmeticId);
-        }
-
-        if (containedIds.Count == 0)
-        {
-            _logger.LogWarning("Bundle implícito sem itens identificados: {BundleId}, DevName: {DevName}", bundleId, entry.DevName);
+            _logger.LogWarning("Entry sem itens válidos: OfferId={OfferId}, DevName={DevName}", entry.OfferId, entry.DevName);
             return;
         }
 
-        var mainCosmetic = allCosmetics.GetValueOrDefault(mainCosmeticId);
-        var bundle = CreateBundleCosmetic(
+        // 2. Decidir se é um bundle ou um item individual
+        bool isBundle = entry.Bundle != null || containedItems.Count > 1;
+
+        if (isBundle)
+        {
+            // É um bundle - processar como tal
+            var containedItemIds = containedItems.Select(c => c.Id).ToList();
+            ProcessBundle(entry, containedItems, containedItemIds, shopCosmetics);
+        }
+        else
+        {
+            // É um item individual
+            ProcessIndividualItem(entry, containedItems[0], shopCosmetics);
+        }
+    }
+
+    /// <summary>
+    /// Processa um bundle da loja
+    /// </summary>
+    private void ProcessBundle(
+        ShopEntry entry, 
+        List<Cosmetic> containedItems, 
+        List<string> containedItemIds, 
+        Dictionary<string, Cosmetic> shopCosmetics)
+    {
+        // Gerar ID único para o bundle
+        var bundleId = entry.Bundle?.Name != null 
+            ? $"BUNDLE_{entry.Bundle.Name.Replace(" ", "").Replace("'", "")}" 
+            : $"BUNDLE_{entry.OfferId}";
+
+        if (shopCosmetics.ContainsKey(bundleId))
+        {
+            return;
+        }
+
+        // Adicionar os itens contidos no bundle à lista principal (se ainda não estiverem)
+        // IMPORTANTE: Os itens do bundle NÃO devem ter IsInShop = true para não aparecerem individualmente na loja
+        foreach (var item in containedItems.Where(item => !shopCosmetics.ContainsKey(item.Id)))
+        {
+            item.IsInShop = false; // Itens de bundle não aparecem individualmente na loja
+            item.Price = 0; // Sem preço individual
+            shopCosmetics.Add(item.Id, item);
+        }
+
+        // Criar e adicionar o cosmético do bundle
+        var mainItem = containedItems[0];
+        var bundleCosmetic = CreateBundleCosmetic(
             bundleId,
-            entry.Bundle!.Name,
-            entry.Bundle.Info,
+            entry.Bundle?.Name ?? $"Bundle {mainItem.Name}",
+            entry.Bundle?.Info ?? $"Pacote contendo {containedItems.Count} itens",
             entry.FinalPrice,
-            entry.Bundle.Image ?? mainCosmetic?.Images?.Featured,
-            mainCosmetic?.Images?.Icon,
-            containedIds,
-            entry.Bundle.Image
+            entry.Bundle?.Image ?? mainItem.Images?.Featured,
+            mainItem.Images?.Icon,
+            containedItemIds,
+            entry.Bundle?.Image
         );
-
-        shopCosmetics.Add(bundleId, bundle);
-        _logger.LogDebug("Bundle implícito processado: {BundleId} com {Count} itens", bundleId, bundle.ContainedItemIds.Count);
-    }
-
-    /// <summary>
-    /// Extrai IDs de cosméticos do campo devName
-    /// Exemplo: "[VIRTUAL]1 x CHROMAKOPIA Tyler, 1 x Dynamite" -> ["CID_...", "CID_..."]
-    /// Clean Code: método com responsabilidade única e bem definida
-    /// </summary>
-    private List<string> ExtractItemIdsFromDevName(string devName, Dictionary<string, Cosmetic> allCosmetics)
-    {
-        var itemIds = new List<string>();
         
-        if (string.IsNullOrEmpty(devName)) return itemIds;
-
-        // Remover prefixo [VIRTUAL] e split por vírgula
-        var cleanDevName = devName.Replace("[VIRTUAL]", "").Trim();
-        var parts = cleanDevName.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var part in parts)
-        {
-            // Extrair nome do item (após "x ")
-            // Padrão: "1 x CHROMAKOPIA Tyler for -1 MtxCurrency"
-            var itemNameMatch = Regex.Match(part, @"x\s+([^,]+?)(?:\s+for|$)");
-            if (!itemNameMatch.Success) continue;
-
-            var itemName = itemNameMatch.Groups[1].Value.Trim();
-            
-            // Buscar o cosmético pelo nome (case-insensitive)
-            var matchingCosmetic = allCosmetics.Values
-                .FirstOrDefault(c => c.Name.Equals(itemName, StringComparison.OrdinalIgnoreCase));
-
-            if (matchingCosmetic != null)
-            {
-                itemIds.Add(matchingCosmetic.Id);
-                _logger.LogDebug("Item '{ItemName}' identificado como ID: {ItemId}", itemName, matchingCosmetic.Id);
-            }
-            else
-            {
-                _logger.LogWarning("Item '{ItemName}' não encontrado no catálogo de cosméticos", itemName);
-            }
-        }
-
-        return itemIds.Distinct().ToList();
+        shopCosmetics.Add(bundleId, bundleCosmetic);
+        
+        _logger.LogDebug(
+            "Bundle processado: {BundleId} com {Count} itens (BrItems: {BrCount}, Tracks: {TrackCount}, Cars: {CarCount}, Instruments: {InstrumentCount}, LegoKits: {LegoCount})", 
+            bundleId, 
+            containedItemIds.Count,
+            entry.BrItems?.Count ?? 0,
+            entry.Tracks?.Count ?? 0,
+            entry.Cars?.Count ?? 0,
+            entry.Instruments?.Count ?? 0,
+            entry.LegoKits?.Count ?? 0
+        );
     }
 
     /// <summary>
-    /// Processa itens individuais da loja
+    /// Processa um item individual da loja
     /// </summary>
-    private void ProcessIndividualItems(ShopEntry entry, Dictionary<string, Cosmetic> shopCosmetics)
+    private static void ProcessIndividualItem(
+        ShopEntry entry, 
+        Cosmetic cosmetic, 
+        Dictionary<string, Cosmetic> shopCosmetics)
     {
-        foreach (var dto in entry.BrItems!.Where(dto => dto.Type != null && dto.Rarity != null))
+        if (shopCosmetics.ContainsKey(cosmetic.Id))
         {
-            if (shopCosmetics.ContainsKey(dto.Id)) continue;
-
-            var cosmetic = MapToCosmetic(dto);
-            cosmetic.IsAvailable = true;
-            cosmetic.Price = entry.FinalPrice > 0 ? entry.FinalPrice : cosmetic.Price;
-            
-            shopCosmetics.Add(dto.Id, cosmetic);
+            return;
         }
+
+        cosmetic.IsInShop = true;
+        cosmetic.Price = entry.FinalPrice > 0 ? entry.FinalPrice : cosmetic.Price;
+        shopCosmetics.Add(cosmetic.Id, cosmetic);
     }
 
     /// <summary>
@@ -524,7 +626,7 @@ public class CosmeticService : ICosmeticService
             Description = description,
             Price = price,
             IsBundle = true,
-            IsAvailable = true,
+            IsInShop = true,
             Images = new CosmeticImages 
             { 
                 Featured = featuredImage,
@@ -576,7 +678,7 @@ public class CosmeticService : ICosmeticService
             } : null,
             Added = dto.Added,
             Price = GetCosmeticPrice(dto),
-            IsAvailable = dto.ShopHistory?.Dates?.Any() ?? false
+            IsInShop = dto.ShopHistory?.Dates?.Any() ?? false
         };
     }
 
@@ -605,9 +707,9 @@ public class CosmeticService : ICosmeticService
                 Icon = track.AlbumArt,
                 Featured = track.AlbumArt
             } : null,
-            Added = DateTime.UtcNow,
+            Added = track.Added != default ? track.Added : DateTime.UtcNow,
             Price = 0,
-            IsAvailable = true
+            IsInShop = true
         };
     }
 
@@ -621,25 +723,153 @@ public class CosmeticService : ICosmeticService
             Id = car.Id,
             Name = car.Name ?? "Unknown Car",
             Description = car.Description ?? string.Empty,
+            Type = car.Type != null ? new CosmeticType
+            {
+                Value = car.Type.Value,
+                DisplayValue = car.Type.DisplayValue
+            } : new CosmeticType { Value = "car", DisplayValue = "Veículo" },
+            Rarity = car.Rarity != null ? new CosmeticRarity
+            {
+                Value = car.Rarity.Value,
+                DisplayValue = car.Rarity.DisplayValue
+            } : new CosmeticRarity { Value = "rare", DisplayValue = "Raro" },
+            Images = car.Images != null ? new CosmeticImages
+            {
+                SmallIcon = car.Images.Small,
+                Icon = car.Images.Icon ?? car.Images.Large,
+                Featured = car.Images.Featured ?? car.Images.Large
+            } : null,
+            Added = car.Added != default ? car.Added : DateTime.UtcNow,
+            Price = 0,
+            IsInShop = true
+        };
+    }
+
+    /// <summary>
+    /// Mapeia InstrumentDto (instrumento) para modelo de domínio Cosmetic
+    /// </summary>
+    private static Cosmetic MapInstrumentToCosmetic(InstrumentDto instrument)
+    {
+        return new Cosmetic
+        {
+            Id = instrument.Id,
+            Name = instrument.Name ?? "Unknown Instrument",
+            Description = instrument.Description ?? string.Empty,
+            Type = instrument.Type != null ? new CosmeticType
+            {
+                Value = instrument.Type.Value,
+                DisplayValue = instrument.Type.DisplayValue
+            } : new CosmeticType { Value = "instrument", DisplayValue = "Instrumento" },
+            Rarity = instrument.Rarity != null ? new CosmeticRarity
+            {
+                Value = instrument.Rarity.Value,
+                DisplayValue = instrument.Rarity.DisplayValue
+            } : new CosmeticRarity { Value = "uncommon", DisplayValue = "Incomum" },
+            Images = instrument.Images != null ? new CosmeticImages
+            {
+                SmallIcon = instrument.Images.Small,
+                Icon = instrument.Images.Large,
+                Featured = instrument.Images.Large
+            } : null,
+            Added = instrument.Added != default ? instrument.Added : DateTime.UtcNow,
+            Price = 0,
+            IsInShop = true
+        };
+    }
+
+    /// <summary>
+    /// Mapeia LegoKitDto (Kit LEGO) para modelo de domínio Cosmetic
+    /// </summary>
+    private static Cosmetic MapLegoKitToCosmetic(LegoKitDto legoKit)
+    {
+        return new Cosmetic
+        {
+            Id = legoKit.Id,
+            Name = legoKit.Name ?? "Unknown LEGO Kit",
+            Description = string.Empty,
+            Type = legoKit.Type != null ? new CosmeticType
+            {
+                Value = legoKit.Type.Value,
+                DisplayValue = legoKit.Type.DisplayValue
+            } : new CosmeticType { Value = "legokit", DisplayValue = "Kit LEGO" },
+            Rarity = new CosmeticRarity
+            {
+                Value = "lego",
+                DisplayValue = "LEGO"
+            },
+            Images = legoKit.Images != null ? new CosmeticImages
+            {
+                SmallIcon = legoKit.Images.Small,
+                Icon = legoKit.Images.Large,
+                Featured = legoKit.Images.Wide ?? legoKit.Images.Large
+            } : null,
+            Added = legoKit.Added != default ? legoKit.Added : DateTime.UtcNow,
+            Price = 0,
+            IsInShop = true
+        };
+    }
+
+    /// <summary>
+    /// Mapeia LegoDto (LEGO cosmético) para modelo de domínio Cosmetic
+    /// </summary>
+    private static Cosmetic MapLegoToCosmetic(LegoDto lego)
+    {
+        return new Cosmetic
+        {
+            Id = lego.Id,
+            Name = lego.CosmeticId ?? lego.Id,
+            Description = string.Empty,
             Type = new CosmeticType
             {
-                Value = "car",
-                DisplayValue = "Veículo"
+                Value = "lego",
+                DisplayValue = "LEGO"
             },
             Rarity = new CosmeticRarity
             {
-                Value = "rare",
-                DisplayValue = "Raro"
+                Value = "lego",
+                DisplayValue = "LEGO"
             },
-            Images = car.Images != null ? new CosmeticImages
+            Images = lego.Images != null ? new CosmeticImages
             {
-                SmallIcon = car.Images.SmallIcon,
-                Icon = car.Images.Icon,
-                Featured = car.Images.Featured
+                SmallIcon = lego.Images.Small,
+                Icon = lego.Images.Large,
+                Featured = lego.Images.Wide ?? lego.Images.Large
             } : null,
-            Added = DateTime.UtcNow,
+            Added = lego.Added != default ? lego.Added : DateTime.UtcNow,
             Price = 0,
-            IsAvailable = true
+            IsInShop = false
+        };
+    }
+
+    /// <summary>
+    /// Mapeia BeanDto (Fall Guys) para modelo de domínio Cosmetic
+    /// </summary>
+    private static Cosmetic MapBeanToCosmetic(BeanDto bean)
+    {
+        return new Cosmetic
+        {
+            Id = bean.Id,
+            Name = bean.Name ?? "Unknown Bean",
+            Description = bean.Gender ?? string.Empty,
+            Type = new CosmeticType
+            {
+                Value = "bean",
+                DisplayValue = "Bean (Fall Guys)"
+            },
+            Rarity = new CosmeticRarity
+            {
+                Value = "uncommon",
+                DisplayValue = "Incomum"
+            },
+            Images = bean.Images != null ? new CosmeticImages
+            {
+                SmallIcon = bean.Images.Small,
+                Icon = bean.Images.Large,
+                Featured = bean.Images.Large
+            } : null,
+            Added = bean.Added != default ? bean.Added : DateTime.UtcNow,
+            Price = 0,
+            IsInShop = false
         };
     }
 
@@ -665,13 +895,22 @@ public class CosmeticService : ICosmeticService
     }
 
     /// <summary>
+    /// Retorna todos os cosméticos como entidades de domínio para persistência
+    /// Usado pelo FortniteDataSyncService para sincronizar itens de bundles
+    /// </summary>
+    public async Task<IEnumerable<Cosmetic>> GetAllCosmeticsForPersistenceAsync()
+    {
+        return await GetAllCosmeticsInternalAsync();
+    }
+
+    /// <summary>
     /// Versão interna que retorna entidades de domínio (usado internamente para processamento de bundles)
     /// Clean Code: Separação entre métodos públicos (que retornam DTOs) e privados (que trabalham com entidades)
     /// </summary>
     private async Task<IEnumerable<Cosmetic>> GetAllCosmeticsInternalAsync()
     {
         var url = $"{_baseUrl}/cosmetics";
-        var response = await _httpClientService.GetAsync<FortniteApiResponse<Dictionary<string, List<CosmeticDto>>>>(url);
+        var response = await _httpClientService.GetAsync<FortniteApiResponse<AllCosmeticsData>>(url);
 
         if (response?.Data == null)
         {
@@ -679,16 +918,51 @@ public class CosmeticService : ICosmeticService
         }
 
         var allCosmetics = new List<Cosmetic>();
+        var data = response.Data;
         
-        foreach (var category in response.Data)
+        // Processar todas as categorias
+        if (data.Br != null)
         {
-            if (category.Value == null) continue;
-            
-            var categoryCosmetics = category.Value
+            var brCosmetics = data.Br
                 .Where(dto => dto.Type != null && dto.Rarity != null)
                 .Select(MapToCosmetic);
-                
-            allCosmetics.AddRange(categoryCosmetics);
+            allCosmetics.AddRange(brCosmetics);
+        }
+        
+        if (data.Tracks != null)
+        {
+            var tracks = data.Tracks.Select(MapTrackToCosmetic);
+            allCosmetics.AddRange(tracks);
+        }
+        
+        if (data.Instruments != null)
+        {
+            var instruments = data.Instruments.Select(MapInstrumentToCosmetic);
+            allCosmetics.AddRange(instruments);
+        }
+        
+        if (data.Cars != null)
+        {
+            var cars = data.Cars.Select(MapCarToCosmetic);
+            allCosmetics.AddRange(cars);
+        }
+        
+        if (data.Lego != null)
+        {
+            var legos = data.Lego.Select(MapLegoToCosmetic);
+            allCosmetics.AddRange(legos);
+        }
+        
+        if (data.LegoKits != null)
+        {
+            var legoKits = data.LegoKits.Select(MapLegoKitToCosmetic);
+            allCosmetics.AddRange(legoKits);
+        }
+        
+        if (data.Beans != null)
+        {
+            var beans = data.Beans.Select(MapBeanToCosmetic);
+            allCosmetics.AddRange(beans);
         }
 
         return allCosmetics;
@@ -729,7 +1003,8 @@ public class CosmeticService : ICosmeticService
             } : null,
             Added = cosmetic.Added,
             Price = cosmetic.Price,
-            IsAvailable = cosmetic.IsAvailable,
+            IsInShop = cosmetic.IsInShop,
+            IsNew = cosmetic.IsNew,
             IsBundle = cosmetic.IsBundle,
             ContainedItemIds = cosmetic.ContainedItemIds,
             Bundle = cosmetic.BundleInfo != null ? new BundleInfoDto
@@ -795,5 +1070,199 @@ public class CosmeticService : ICosmeticService
     }
 
     #endregion
+
+    #region Busca Avançada com Filtros e Paginação
+
+    /// <summary>
+    /// Busca cosméticos com filtros avançados, paginação e ordenação
+    /// Atende requisito: Busca por nome, tipo, raridade, data, disponibilidade e promoção
+    /// </summary>
+    public async Task<PaginatedCosmeticsResponse> SearchCosmeticsAsync(CosmeticFilterRequest filters)
+    {
+        try
+        {
+            _logger.LogInformation("Buscando cosméticos com filtros - Página: {Page}, Busca: {Search}", 
+                filters.Page, filters.SearchTerm ?? "nenhuma");
+
+            var query = _context.Cosmetics.AsQueryable();
+            
+            // Busca textual (nome ou descrição)
+            if (!string.IsNullOrWhiteSpace(filters.SearchTerm))
+            {
+                var searchLower = filters.SearchTerm.ToLower();
+                query = query.Where(c => 
+                    c.Name.ToLower().Contains(searchLower) || 
+                    c.Description.ToLower().Contains(searchLower));
+            }
+            
+            // Filtros por tipo (OR - qualquer um dos tipos selecionados)
+            if (filters.Types?.Any() == true)
+            {
+                var typesLower = filters.Types.Select(t => t.ToLower()).ToList();
+                query = query.Where(c => c.Type != null && typesLower.Contains(c.Type.Value.ToLower()));
+            }
+            
+            // Filtros por raridade (OR - qualquer uma das raridades selecionadas)
+            if (filters.Rarities?.Any() == true)
+            {
+                var raritiesLower = filters.Rarities.Select(r => r.ToLower()).ToList();
+                query = query.Where(c => c.Rarity != null && raritiesLower.Contains(c.Rarity.Value.ToLower()));
+            }
+            
+            // Filtros de data (converter para UTC para compatibilidade com PostgreSQL)
+            if (filters.AddedAfter.HasValue)
+            {
+                var addedAfterUtc = filters.AddedAfter.Value.Kind == DateTimeKind.Unspecified 
+                    ? DateTime.SpecifyKind(filters.AddedAfter.Value, DateTimeKind.Utc)
+                    : filters.AddedAfter.Value.ToUniversalTime();
+                query = query.Where(c => c.Added >= addedAfterUtc);
+            }
+            
+            if (filters.AddedBefore.HasValue)
+            {
+                var addedBeforeUtc = filters.AddedBefore.Value.Kind == DateTimeKind.Unspecified 
+                    ? DateTime.SpecifyKind(filters.AddedBefore.Value, DateTimeKind.Utc)
+                    : filters.AddedBefore.Value.ToUniversalTime();
+                query = query.Where(c => c.Added <= addedBeforeUtc);
+            }
+            
+            // Apenas novos (retornados pelo endpoint /cosmetics/new)
+            if (filters.OnlyNew == true)
+            {
+                query = query.Where(c => c.IsNew);
+            }
+            
+            // Apenas disponíveis para compra
+            if (filters.OnlyAvailable == true)
+            {
+                query = query.Where(c => c.IsInShop);
+            }
+            
+            // Apenas em promoção (preço > 0 e disponível)
+            if (filters.OnlyInShop == true)
+            {
+                query = query.Where(c => c.Price > 0 && c.IsInShop);
+            }
+            
+            // Excluir bundles ou gerenciar exibição de bundles
+            if (filters.ExcludeBundles == true)
+            {
+                // Excluir bundles completamente
+                query = query.Where(c => !c.IsBundle);
+            }
+            else
+            {
+                // IMPORTANTE: Quando bundles estão incluídos, devemos OCULTAR os itens individuais
+                // que fazem parte de bundles para evitar duplicação (mesma regra da loja)
+                // Como ContainedItemIds é [NotMapped], precisamos carregar em memória primeiro
+                var bundleItems = await _context.Cosmetics
+                    .Where(c => c.IsBundle && c.ContainedItemIdsJson != null && c.ContainedItemIdsJson != "[]")
+                    .Select(c => c.ContainedItemIdsJson)
+                    .ToListAsync();
+                
+                // Deserializar e coletar todos os IDs únicos
+                var bundleItemIds = bundleItems
+                    .SelectMany(json => System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>())
+                    .Distinct()
+                    .ToHashSet();
+                
+                // Incluir apenas: bundles OU itens que não estão em nenhum bundle
+                if (bundleItemIds.Any())
+                {
+                    query = query.Where(c => c.IsBundle || !bundleItemIds.Contains(c.Id));
+                }
+            }
+            
+            // Filtros de preço (validar valores positivos)
+            if (filters.MinPrice.HasValue && filters.MinPrice.Value >= 0)
+            {
+                query = query.Where(c => c.Price >= filters.MinPrice.Value);
+            }
+            
+            if (filters.MaxPrice.HasValue && filters.MaxPrice.Value >= 0)
+            {
+                query = query.Where(c => c.Price <= filters.MaxPrice.Value);
+            }
+            
+            // Total de itens antes da paginação
+            var totalCount = await query.CountAsync();
+            
+            // IMPORTANTE: Calcular metadados de filtros ANTES da paginação, mas DEPOIS dos filtros aplicados
+            // Isso garante que as contagens reflitam apenas os itens que atendem aos critérios atuais
+            // Otimização: usar GroupBy diretamente no banco de dados em vez de carregar tudo em memória
+            var availableTypes = await query
+                .Where(c => c.Type != null)
+                .GroupBy(c => c.Type!.Value)
+                .Select(g => new { Type = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Type, x => x.Count);
+            
+            var availableRarities = await query
+                .Where(c => c.Rarity != null)
+                .GroupBy(c => c.Rarity!.Value)
+                .Select(g => new { Rarity = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Rarity, x => x.Count);
+            
+            var minPrice = await query.AnyAsync() ? await query.MinAsync(c => c.Price) : 0;
+            var maxPrice = await query.AnyAsync() ? await query.MaxAsync(c => c.Price) : 0;
+            
+            // Ordenação
+            query = filters.SortBy.ToLower() switch
+            {
+                "name" => filters.SortOrder == "asc" 
+                    ? query.OrderBy(c => c.Name) 
+                    : query.OrderByDescending(c => c.Name),
+                "price" => filters.SortOrder == "asc" 
+                    ? query.OrderBy(c => c.Price) 
+                    : query.OrderByDescending(c => c.Price),
+                "rarity" => filters.SortOrder == "asc" 
+                    ? query.OrderBy(c => c.Rarity!.Value) 
+                    : query.OrderByDescending(c => c.Rarity!.Value),
+                _ => filters.SortOrder == "asc" 
+                    ? query.OrderBy(c => c.Added) 
+                    : query.OrderByDescending(c => c.Added)
+            };
+            
+            // Paginação
+            var cosmetics = await query
+                .Skip((filters.Page - 1) * filters.PageSize)
+                .Take(filters.PageSize)
+                .ToListAsync();
+            
+            // Mapear para DTOs
+            var items = new List<CosmeticResponseDto>();
+            foreach (var cosmetic in cosmetics)
+            {
+                items.Add(await MapToResponseDtoAsync(cosmetic));
+            }
+            
+            var totalPages = (int)Math.Ceiling(totalCount / (double)filters.PageSize);
+            
+            _logger.LogInformation("Busca concluída: {Total} itens encontrados, Página {Page}/{TotalPages}", 
+                totalCount, filters.Page, totalPages);
+            
+            return new PaginatedCosmeticsResponse
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = filters.Page,
+                PageSize = filters.PageSize,
+                TotalPages = totalPages,
+                HasPreviousPage = filters.Page > 1,
+                HasNextPage = filters.Page < totalPages,
+                AvailableTypes = availableTypes,
+                AvailableRarities = availableRarities,
+                MinPriceAvailable = minPrice,
+                MaxPriceAvailable = maxPrice
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao buscar cosméticos com filtros");
+            throw;
+        }
+    }
+
+    #endregion
 }
+
 
