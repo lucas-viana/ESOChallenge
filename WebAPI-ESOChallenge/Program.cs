@@ -30,31 +30,39 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-                       ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-if (connectionString.StartsWith("postgres://"))
+// ... (logo após builder.Services.AddSwaggerGen();)
+
+// 1. Pega a string de conexão bruta
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// 2. Lógica de conversão para o Render (postgres:// -> Host=...)
+if (!string.IsNullOrEmpty(connectionString) && 
+    (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://")))
 {
-    var uri = new Uri(connectionString);
-    var userInfo = uri.UserInfo.Split(':');
+    // Parse da URL
+    var databaseUri = new Uri(connectionString);
+    var userInfo = databaseUri.UserInfo.Split(':');
     
-    var npgsqlBuilder = new NpgsqlConnectionStringBuilder
+    // Reconstrói para o formato Key=Value que o Npgsql entende
+    var builderNpgsql = new NpgsqlConnectionStringBuilder
     {
-        Host = uri.Host,
-        Port = uri.Port,
+        Host = databaseUri.Host,
+        Port = databaseUri.Port,
         Username = userInfo[0],
         Password = userInfo[1],
-        Database = uri.LocalPath.TrimStart('/'),
-        Pooling = true,
-        SslMode = SslMode.Prefer // Render exige SSL em produção geralmente
+        Database = databaseUri.LocalPath.TrimStart('/'),
+        SslMode = SslMode.Prefer // Render exige SSL, mas Prefer é seguro para ambos
     };
-    connectionString = npgsqlBuilder.ToString();
+    
+    connectionString = builderNpgsql.ToString();
 }
 
-// Configure database context
+// 3. Configura o DbContext com a string tratada
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// ... (resto do código)
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
@@ -128,17 +136,18 @@ var app = builder.Build();
 // CORS needs to process OPTIONS requests before any auth middleware
 app.UseCorsPolicy(app.Environment);
 
-// Development-only middleware
+// 1. Exceções detalhadas APENAS em desenvolvimento (Segurança)
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "WebAPI ESO Challenge V1");
-        options.RoutePrefix = string.Empty; // Swagger at root URL
-    });
 }
+
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "WebAPI ESO Challenge V1");
+    options.RoutePrefix = string.Empty;
+});
 
 // Authentication & Authorization
 // Order is important: Authentication BEFORE Authorization
