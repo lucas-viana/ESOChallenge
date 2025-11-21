@@ -4,7 +4,7 @@
  */
 
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://localhost:7001',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://localhost:5001',
   ENDPOINTS: {
     COSMETICS: {
       ALL: '/api/cosmetics',

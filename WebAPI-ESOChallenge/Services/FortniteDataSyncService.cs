@@ -161,7 +161,8 @@ public class FortniteDataSyncService : BackgroundService
                     cosmetic.IsInShop = true;
                 }
 
-                if (markAsNew)
+                // IMPORTANTE: Preservar IsNew do cosmético ou aplicar flag markAsNew
+                if (markAsNew || cosmetic.IsNew)
                 {
                     cosmetic.IsNew = true;
                 }
@@ -193,7 +194,9 @@ public class FortniteDataSyncService : BackgroundService
                     existing.IsInShop = true;
                 }
                 
-                if (markAsNew)
+                // IMPORTANTE: Sempre atualizar IsNew do cosmético recebido
+                // Isso garante que itens marcados como novos pela API sejam persistidos
+                if (markAsNew || cosmetic.IsNew)
                 {
                     existing.IsNew = true;
                 }

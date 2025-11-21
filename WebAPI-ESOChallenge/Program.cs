@@ -30,22 +30,22 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// ========================================
+// Database Configuration
+// ========================================
+// Prioriza variável de ambiente (Docker) sobre appsettings.json
+var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// ... (logo após builder.Services.AddSwaggerGen();)
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// 2. Lógica de conversão para o Render (Aceita postgres:// e postgresql://)
-if (!string.IsNullOrEmpty(connectionString) && 
-    (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://")))
+// Se a string de conexão vier no formato URL (postgres://), converte para formato Npgsql
+if (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://"))
 {
     try 
     {
-        // Parse da URL
         var databaseUri = new Uri(connectionString);
         var userInfo = databaseUri.UserInfo.Split(':');
         
-        // Reconstrói para o formato Key=Value que o Npgsql entende
         var builderNpgsql = new NpgsqlConnectionStringBuilder
         {
             Host = databaseUri.Host,
@@ -58,16 +58,18 @@ if (!string.IsNullOrEmpty(connectionString) &&
         };
         
         connectionString = builderNpgsql.ToString();
+        Console.WriteLine($" Connection string convertida do formato URL para Npgsql");
     }
     catch (Exception ex)
     {
-        // Loga o erro para ajudar no debug se a string estiver mal formatada
-        Console.WriteLine($"Erro ao processar connection string: {ex.Message}");
+        Console.WriteLine($" Erro ao processar connection string: {ex.Message}");
         throw;
     }
 }
 
-// 3. Configura o DbContext
+Console.WriteLine($"Conectando ao banco de dados...");
+
+// Configura o DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -138,6 +140,50 @@ builder.Services.AddHostedService<FortniteDataSyncService>();
 var app = builder.Build();
 
 // ========================================
+// Database Migration & Seeding
+// ========================================
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        
+        logger.LogInformation("Verificando migrations do banco de dados...");
+        
+        
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            await context.Database.MigrateAsync();
+            logger.LogInformation("Migrations aplicadas com sucesso!");
+        }
+        else
+        {
+            logger.LogInformation("Banco de dados está atualizado. Nenhuma migration pendente.");
+        }
+        
+        // Verifica se o banco está acessível
+        var canConnect = await context.Database.CanConnectAsync();
+        if (canConnect)
+        {
+            logger.LogInformation(" Conexão com o banco de dados estabelecida com sucesso!");
+        }
+        else
+        {
+            logger.LogError(" Não foi possível conectar ao banco de dados!");
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, " Erro ao executar migrations do banco de dados");
+        throw;
+    }
+}
+
+// ========================================
 // Configure the HTTP request pipeline
 // ========================================
 
@@ -158,8 +204,6 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = string.Empty;
 });
 
-// Authentication & Authorization
-// Order is important: Authentication BEFORE Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
