@@ -1,10 +1,14 @@
 /**
  * Configurações centralizadas da API
  * Facilita manutenção e testes (Princípio DRY - Don't Repeat Yourself)
+ * 
+ * A BASE_URL é configurada através de variáveis de ambiente:
+ * - .env.development: para desenvolvimento local
+ * - .env.production: para build de produção
  */
 
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://eso-backend-zun3.onrender.com',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL,
   ENDPOINTS: {
     COSMETICS: {
       ALL: '/api/cosmetics',

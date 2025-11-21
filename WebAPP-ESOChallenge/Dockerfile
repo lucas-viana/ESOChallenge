@@ -1,10 +1,16 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+# Build arguments
+ARG VITE_API_BASE_URL=https://eso-backend-zun3.onrender.com
+
 COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+# Set environment variable for build
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN npm run build
 

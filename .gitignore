@@ -215,3 +215,6 @@ appsettings.json
 appsettings.Development.json
 appsettings.*.json
 
+# Environment files (local overrides)
+.env.local
+.env.*.local
