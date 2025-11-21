@@ -26,20 +26,41 @@ function handleLogout() {
         <RouterLink to="/" class="nav-logo"> 🎮 Fortnite </RouterLink>
 
         <div class="nav-center">
-          <RouterLink to="/">🏠 Home</RouterLink>
-          <RouterLink to="/cosmetics">📚 Coleção</RouterLink>
-          <RouterLink to="/shop">🛒 Loja</RouterLink>
-          <RouterLink to="/users">👥 Usuários</RouterLink>
+          <RouterLink to="/">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-text">Home</span>
+          </RouterLink>
+          <RouterLink to="/cosmetics">
+            <span class="nav-icon">📚</span>
+            <span class="nav-text">Coleção</span>
+          </RouterLink>
+          <RouterLink to="/shop">
+            <span class="nav-icon">🛒</span>
+            <span class="nav-text">Loja</span>
+          </RouterLink>
+          <RouterLink to="/users">
+            <span class="nav-icon">👥</span>
+            <span class="nav-text">Usuários</span>
+          </RouterLink>
 
           <!-- Authenticated user links -->
           <template v-if="authStore.isAuthenticated">
-            <RouterLink to="/inventory">👜 Inventário</RouterLink>
-            <RouterLink to="/purchase-history">📜 Histórico</RouterLink>
+            <RouterLink to="/inventory">
+              <span class="nav-icon">👜</span>
+              <span class="nav-text">Inventário</span>
+            </RouterLink>
+            <RouterLink to="/purchase-history">
+              <span class="nav-icon">📜</span>
+              <span class="nav-text">Histórico</span>
+            </RouterLink>
           </template>
 
           <!-- Guest links -->
           <template v-else>
-            <RouterLink to="/about">ℹ️ Sobre</RouterLink>
+            <RouterLink to="/about">
+              <span class="nav-icon">ℹ️</span>
+              <span class="nav-text">Sobre</span>
+            </RouterLink>
           </template>
         </div>
 
@@ -123,10 +144,15 @@ function handleLogout() {
   color: #9ca3af;
   text-decoration: none;
   font-weight: 600;
-  font-size: 1rem;
-  padding: 8px 16px;
+  font-size: 0.875rem;
+  padding: 8px 12px;
   border-radius: 8px;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
 }
 
 .nav-center a:hover {
@@ -137,6 +163,16 @@ function handleLogout() {
 .nav-center a.router-link-active {
   color: #667eea;
   background: rgba(102, 126, 234, 0.1);
+}
+
+.nav-icon {
+  font-size: 1.5rem;
+  display: block;
+}
+
+.nav-text {
+  font-size: 0.75rem;
+  display: block;
 }
 
 .nav-right {
@@ -233,8 +269,16 @@ function handleLogout() {
   }
 
   .nav-center a {
-    font-size: 0.875rem;
-    padding: 6px 12px;
+    font-size: 0.75rem;
+    padding: 6px 10px;
+  }
+
+  .nav-icon {
+    font-size: 1.25rem;
+  }
+
+  .nav-text {
+    font-size: 0.7rem;
   }
 
   .nav-right {
