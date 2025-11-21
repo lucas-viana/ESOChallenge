@@ -210,3 +210,8 @@ Desktop.ini
 .AppleDouble
 .LSOverride
 
+# Application settings (contains secrets)
+appsettings.json
+appsettings.Development.json
+appsettings.*.json
+
