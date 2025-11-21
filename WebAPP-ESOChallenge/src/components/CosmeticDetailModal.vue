@@ -105,7 +105,7 @@
 
                 <div class="info-item">
                   <span class="info-label">Disponível</span>
-                  <span class="info-value">{{ cosmetic.isAvailable ? 'Sim' : 'Não' }}</span>
+                  <span class="info-value">{{ cosmetic.isInShop ? 'Sim' : 'Não' }}</span>
                 </div>
               </div>
 

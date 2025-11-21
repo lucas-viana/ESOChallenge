@@ -108,7 +108,7 @@
       </div>
 
       <!-- Badge de Disponibilidade -->
-      <div v-if="cosmetic.isAvailable" class="cosmetic-card__availability">
+      <div v-if="cosmetic.isInShop" class="cosmetic-card__availability">
         <span class="availability-dot"></span>
         Disponível
       </div>

@@ -107,7 +107,7 @@ const getUserDisplayName = (user: UserProfile): string => {
   if (user.firstName) {
     return user.firstName
   }
-  return user.email.split('@')[0]
+  return user.email?.split('@')[0] || 'Usuário'
 }
 
 const openUserProfile = (userId: string) => {

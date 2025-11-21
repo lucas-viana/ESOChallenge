@@ -96,7 +96,8 @@ export class CosmeticService {
       // A API retorna { success, data, pagination, filters }
       // Precisamos mapear para o formato esperado
       return {
-        items: response.data || [],
+        success: response.success,
+        data: response.data || [],
         pagination: response.pagination,
         filters: response.filters,
       }

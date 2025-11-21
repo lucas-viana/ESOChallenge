@@ -192,7 +192,7 @@ export const useCosmeticStore = defineStore('cosmetic', () => {
         searchAbortController.value.signal,
       )
 
-      searchResults.value = response.items || []
+      searchResults.value = response.data || []
       searchPagination.value = response.pagination
       searchMetadata.value = response.filters
     } catch (err) {
