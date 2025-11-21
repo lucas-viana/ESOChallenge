@@ -1,22 +1,19 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using WebAPI_ESOChallenge.Data;
+using WebAPI_ESOChallenge.Extensions;
 using WebAPI_ESOChallenge.Features.Authentication.Interfaces;
-using WebAPI_ESOChallenge.Features.Authentication.Services;
 using WebAPI_ESOChallenge.Features.Authentication.Models;
+using WebAPI_ESOChallenge.Features.Authentication.Services;
 using WebAPI_ESOChallenge.Features.Cosmetics.Interfaces;
 using WebAPI_ESOChallenge.Features.Cosmetics.Services;
 using WebAPI_ESOChallenge.Features.Purchases.Interfaces;
 using WebAPI_ESOChallenge.Features.Purchases.Services;
-using WebAPI_ESOChallenge.Services.Interfaces;
 using WebAPI_ESOChallenge.Services;
-using WebAPI_ESOChallenge.Data;
-using WebAPI_ESOChallenge.Extensions;
+using WebAPI_ESOChallenge.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
