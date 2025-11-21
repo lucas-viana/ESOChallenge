@@ -27,7 +27,7 @@ public class FortniteDataSyncService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("🚀 Fortnite Data Sync Service iniciado");
+        _logger.LogInformation("Fortnite Data Sync Service iniciado");
 
         // Aguarda 5 segundos para garantir que o app está totalmente inicializado
         await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
@@ -49,26 +49,39 @@ public class FortniteDataSyncService : BackgroundService
     {
         try
         {
-            _logger.LogInformation("🔄 Iniciando sincronização completa do Fortnite (Loja + Todos os Cosméticos + Novos)...");
+            _logger.LogInformation("Iniciando sincronização completa do Fortnite (Loja + Todos os Cosméticos + Novos)...");
 
             using var scope = _serviceProvider.CreateScope();
             var cosmeticService = scope.ServiceProvider.GetRequiredService<ICosmeticService>();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+            // IMPORTANTE: Buscar itens novos ANTES de resetar flags
+            // Isso garante que temos a lista atualizada da API antes de qualquer modificação
+            _logger.LogInformation("Buscando itens novos da API...");
+            var newCosmetics = await cosmeticService.GetNewCosmeticsForPersistenceAsync();
+            var newCosmeticIds = newCosmetics?.Select(c => c.Id).ToHashSet() ?? new HashSet<string>();
+            _logger.LogInformation("{Count} itens novos identificados pela API", newCosmeticIds.Count);
+
             // 1. Sincronizar TODOS os cosméticos (todas as categorias: br, tracks, cars, instruments, lego, legoKits, beans)
-            _logger.LogInformation("📦 Fase 1/3: Sincronizando todos os cosméticos...");
+            _logger.LogInformation("Fase 1/3: Sincronizando todos os cosméticos...");
             var allCosmetics = await cosmeticService.GetAllCosmeticsForPersistenceAsync();
             
             if (allCosmetics == null || !allCosmetics.Any())
             {
-                _logger.LogWarning("⚠️ Nenhum cosmético encontrado na API");
+                _logger.LogWarning("Nenhum cosmético encontrado na API");
             }
             else
             {
                 var allCosmeticsList = allCosmetics.ToList();
-                _logger.LogInformation("📊 {Count} cosméticos encontrados (todas categorias)", allCosmeticsList.Count);
+                _logger.LogInformation("{Count} cosméticos encontrados (todas categorias)", allCosmeticsList.Count);
 
-                await UpsertCosmeticsAsync(dbContext, allCosmeticsList, cancellationToken);
+                // Marcar itens que estão na lista de novos ANTES de fazer upsert
+                foreach (var cosmetic in allCosmeticsList)
+                {
+                    cosmetic.IsNew = newCosmeticIds.Contains(cosmetic.Id);
+                }
+
+                await UpsertCosmeticsAsync(dbContext, allCosmeticsList, cancellationToken, preserveIsNew: true);
             }
 
             // 2. Sincronizar itens da LOJA e atualizar flags IsInShop
@@ -77,52 +90,32 @@ public class FortniteDataSyncService : BackgroundService
             
             if (shopCosmetics == null || !shopCosmetics.Any())
             {
-                _logger.LogWarning("⚠️ Nenhum cosmético encontrado na loja");
+                _logger.LogWarning("Nenhum cosmético encontrado na loja");
             }
             else
             {
                 var shopList = shopCosmetics.ToList();
-                _logger.LogInformation("🛍️ {Count} itens na loja atual", shopList.Count);
+                _logger.LogInformation("{Count} itens na loja atual", shopList.Count);
 
                 // Resetar IsInShop de todos os itens
                 await dbContext.Cosmetics
                     .ExecuteUpdateAsync(c => c.SetProperty(x => x.IsInShop, false), cancellationToken);
 
                 // Marcar itens da loja atual como IsInShop = true e atualizar preços
-                await UpsertCosmeticsAsync(dbContext, shopList, cancellationToken, markAsInShop: true);
+                await UpsertCosmeticsAsync(dbContext, shopList, cancellationToken, markAsInShop: true, preserveIsNew: true);
             }
 
-            // 3. Sincronizar itens NOVOS e atualizar flags IsNew
-            _logger.LogInformation("✨ Fase 3/3: Sincronizando itens novos...");
-            
-            // Resetar IsNew de TODOS os itens no banco
-            await dbContext.Cosmetics
-                .ExecuteUpdateAsync(c => c.SetProperty(x => x.IsNew, false), cancellationToken);
-            
-            var newCosmetics = await cosmeticService.GetNewCosmeticsForPersistenceAsync();
-            
-            if (newCosmetics == null || !newCosmetics.Any())
-            {
-                _logger.LogWarning("⚠️ Nenhum cosmético novo encontrado");
-            }
-            else
-            {
-                var newList = newCosmetics.ToList();
-                _logger.LogInformation("🆕 {Count} itens novos encontrados", newList.Count);
+            _logger.LogInformation("Sincronização completa finalizada - {Count} itens marcados como novos", newCosmeticIds.Count);
 
-                // Marcar itens novos como IsNew = true
-                await UpsertCosmeticsAsync(dbContext, newList, cancellationToken, markAsNew: true);
-            }
-
-            _logger.LogInformation("✅ Sincronização completa finalizada com sucesso!");
+            _logger.LogInformation("Sincronização completa finalizada com sucesso!");
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("🛑 Sincronização cancelada pelo sistema");
+            _logger.LogInformation("Sincronização cancelada pelo sistema");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "❌ Erro durante a sincronização de dados do Fortnite");
+            _logger.LogError(ex, "Erro durante a sincronização de dados do Fortnite");
         }
     }
 
@@ -134,7 +127,8 @@ public class FortniteDataSyncService : BackgroundService
         List<Cosmetic> cosmetics, 
         CancellationToken cancellationToken,
         bool markAsInShop = false,
-        bool markAsNew = false)
+        bool markAsNew = false,
+        bool preserveIsNew = false)
     {
         var insertedCount = 0;
         var updatedCount = 0;
@@ -194,9 +188,15 @@ public class FortniteDataSyncService : BackgroundService
                     existing.IsInShop = true;
                 }
                 
-                // IMPORTANTE: Sempre atualizar IsNew do cosmético recebido
-                // Isso garante que itens marcados como novos pela API sejam persistidos
-                if (markAsNew || cosmetic.IsNew)
+                // IMPORTANTE: Gerenciar IsNew corretamente
+                // Se preserveIsNew = true, copia o valor de cosmetic.IsNew (já foi marcado antes do upsert)
+                // Se markAsNew = true, força IsNew = true
+                // Caso contrário, mantém o valor existente no banco
+                if (preserveIsNew)
+                {
+                    existing.IsNew = cosmetic.IsNew;
+                }
+                else if (markAsNew)
                 {
                     existing.IsNew = true;
                 }
@@ -215,7 +215,7 @@ public class FortniteDataSyncService : BackgroundService
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("🛑 Fortnite Data Sync Service parando...");
+        _logger.LogInformation("Fortnite Data Sync Service parando...");
         await base.StopAsync(cancellationToken);
     }
 }
