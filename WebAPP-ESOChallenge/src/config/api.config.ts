@@ -1,7 +1,7 @@
 /**
  * Configurações centralizadas da API
  * Facilita manutenção e testes (Princípio DRY - Don't Repeat Yourself)
- * 
+ *
  * A BASE_URL é configurada através de variáveis de ambiente:
  * - .env.development: para desenvolvimento local
  * - .env.production: para build de produção
