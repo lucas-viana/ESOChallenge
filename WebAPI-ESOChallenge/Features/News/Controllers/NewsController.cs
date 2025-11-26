@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebAPI_ESOChallenge.Features.News.DTOs;
 using WebAPI_ESOChallenge.Features.News.Interfaces;
@@ -9,6 +10,7 @@ namespace WebAPI_ESOChallenge.Features.News.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[AllowAnonymous]
 public class NewsController : ControllerBase
 {
     private readonly INewsService _newsService;

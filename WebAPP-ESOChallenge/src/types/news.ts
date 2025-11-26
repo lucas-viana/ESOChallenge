@@ -8,22 +8,24 @@ export interface NewsApiResponse {
 
 /**
  * News data containing information for different game modes
+ * All game modes are optional as the API returns them based on availability
  */
 export interface NewsData {
-  br: NewsGameMode
-  stw: NewsGameMode
-  creative: NewsGameMode
+  br?: NewsGameMode
+  stw?: NewsGameMode
+  creative?: NewsGameMode
 }
 
 /**
  * News information for a specific game mode (BR, STW, or Creative)
+ * All fields are optional as the API returns them based on availability
  */
 export interface NewsGameMode {
-  hash: string
-  date: string
-  image: string | null
-  motds: Motd[]
-  messages: NewsMessage[]
+  hash?: string
+  date?: string
+  image?: string | null
+  motds?: Motd[]
+  messages?: NewsMessage[]
 }
 
 /**
