@@ -1,14 +1,42 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import newsService from '@/services/newsService'
-import type { Motd } from '@/types/news'
+import type { Motd, NewsMessage } from '@/types/news'
 
-const newsItems = ref<Motd[]>([])
+// Unified type for displaying news items (both MOTDs and Messages)
+interface NewsItem {
+  id: string
+  title: string
+  body: string
+  image: string | null
+  websiteUrl?: string | null
+  sortingPriority: number
+}
+
+const newsItems = ref<NewsItem[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const currentIndex = ref(0)
 
 const currentNews = computed(() => newsItems.value[currentIndex.value])
+
+const convertMotdToNewsItem = (motd: Motd): NewsItem => ({
+  id: motd.id,
+  title: motd.title,
+  body: motd.body,
+  image: motd.image || motd.tileImage,
+  websiteUrl: motd.websiteUrl,
+  sortingPriority: motd.sortingPriority
+})
+
+const convertMessageToNewsItem = (message: NewsMessage, index: number): NewsItem => ({
+  id: `message-${index}`,
+  title: message.title,
+  body: message.body,
+  image: message.image,
+  websiteUrl: undefined,
+  sortingPriority: 0
+})
 
 const fetchNews = async () => {
   try {
@@ -18,14 +46,48 @@ const fetchNews = async () => {
 
     console.log('News API Response:', response)
 
-    // Get BR news (Battle Royale) and filter out hidden items
-    if (response.data?.br?.motds) {
-      newsItems.value = response.data.br.motds
-        .filter(motd => !motd.hidden)
-        .sort((a, b) => b.sortingPriority - a.sortingPriority)
-
-      console.log('Filtered news items:', newsItems.value)
+    const allNewsItems: NewsItem[] = []
+    
+    // Try to get MOTDs from any available game mode
+    if (response.data?.br?.motds && response.data.br.motds.length > 0) {
+      console.log('Found BR motds:', response.data.br.motds.length)
+      allNewsItems.push(...response.data.br.motds.filter(m => !m.hidden).map(convertMotdToNewsItem))
     }
+    
+    if (response.data?.stw?.motds && response.data.stw.motds.length > 0) {
+      console.log('Found STW motds:', response.data.stw.motds.length)
+      allNewsItems.push(...response.data.stw.motds.filter(m => !m.hidden).map(convertMotdToNewsItem))
+    }
+    
+    if (response.data?.creative?.motds && response.data.creative.motds.length > 0) {
+      console.log('Found Creative motds:', response.data.creative.motds.length)
+      allNewsItems.push(...response.data.creative.motds.filter(m => !m.hidden).map(convertMotdToNewsItem))
+    }
+
+    // If no MOTDs found, try to get messages instead
+    if (allNewsItems.length === 0) {
+      console.log('No motds found, trying messages...')
+      
+      if (response.data?.br?.messages && response.data.br.messages.length > 0) {
+        console.log('Found BR messages:', response.data.br.messages.length)
+        allNewsItems.push(...response.data.br.messages.map(convertMessageToNewsItem))
+      }
+      
+      if (response.data?.stw?.messages && response.data.stw.messages.length > 0) {
+        console.log('Found STW messages:', response.data.stw.messages.length)
+        allNewsItems.push(...response.data.stw.messages.map(convertMessageToNewsItem))
+      }
+      
+      if (response.data?.creative?.messages && response.data.creative.messages.length > 0) {
+        console.log('Found Creative messages:', response.data.creative.messages.length)
+        allNewsItems.push(...response.data.creative.messages.map(convertMessageToNewsItem))
+      }
+    }
+
+    // Sort by priority and assign to newsItems
+    newsItems.value = allNewsItems.sort((a, b) => b.sortingPriority - a.sortingPriority)
+    
+    console.log('Total news items loaded:', newsItems.value.length)
   } catch (err) {
     console.error('Error fetching news:', err)
     error.value = 'Erro ao carregar notícias do Fortnite'
@@ -110,15 +172,15 @@ onMounted(() => {
 
                 <div class="carousel-track">
                   <div
-                    v-for="(motd, index) in newsItems"
-                    :key="motd.id"
+                    v-for="(newsItem, index) in newsItems"
+                    :key="newsItem.id"
                     class="carousel-slide"
                     :class="{ active: index === currentIndex }"
                   >
                     <img
-                      v-if="motd.image || motd.tileImage"
-                      :src="motd.image || motd.tileImage || ''"
-                      :alt="motd.title"
+                      v-if="newsItem.image"
+                      :src="newsItem.image"
+                      :alt="newsItem.title"
                       class="carousel-image"
                     />
                     <div v-else class="carousel-placeholder">
@@ -152,8 +214,8 @@ onMounted(() => {
               <!-- Carousel Indicators -->
               <div class="carousel-indicators">
                 <button
-                  v-for="(motd, index) in newsItems"
-                  :key="'indicator-' + motd.id"
+                  v-for="(newsItem, index) in newsItems"
+                  :key="'indicator-' + newsItem.id"
                   @click="goToSlide(index)"
                   class="indicator"
                   :class="{ active: index === currentIndex }"
