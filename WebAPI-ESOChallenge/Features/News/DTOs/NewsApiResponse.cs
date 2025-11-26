@@ -31,23 +31,24 @@ public class NewsData
 
 /// <summary>
 /// News information for a specific game mode (BR, STW, or Creative)
+/// All fields are optional as the API returns them based on availability
 /// </summary>
 public class NewsGameMode
 {
     [JsonPropertyName("hash")]
-    public string Hash { get; set; } = string.Empty;
+    public string? Hash { get; set; }
 
     [JsonPropertyName("date")]
-    public DateTime Date { get; set; }
+    public DateTime? Date { get; set; }
 
     [JsonPropertyName("image")]
     public string? Image { get; set; }
 
     [JsonPropertyName("motds")]
-    public List<Motd> Motds { get; set; } = new();
+    public List<Motd>? Motds { get; set; }
 
     [JsonPropertyName("messages")]
-    public List<NewsMessage> Messages { get; set; } = new();
+    public List<NewsMessage>? Messages { get; set; }
 }
 
 /// <summary>
